@@ -1,0 +1,18 @@
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8080}
+spring:
+  datasource:
+    url: ${JDBC_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:migrations/001_funds.sql
+ariadne:
+  python-base-url: ${PYTHON_BASE_URL:http://127.0.0.1:8000}
+  minimum-start-date: ${ARIADNE_MINIMUM_START_DATE:2025-01-01}
+  recent-cache-ttl: ${ARIADNE_RECENT_CACHE_TTL:PT5M}
+  historic-cache-ttl: ${ARIADNE_HISTORIC_CACHE_TTL:PT24H}
+  http-timeout: ${ARIADNE_HTTP_TIMEOUT:PT10S}

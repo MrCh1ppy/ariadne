@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ariadne-akshare"
+version = "0.1.0"
+dependencies = ["akshare==1.18.97", "fastapi==0.115.14", "pandas==2.3.3", "pydantic==2.13.5", "uvicorn==0.35.0"]
+
+[project.optional-dependencies]
+dev = ["httpx==0.28.1", "mypy==1.17.1", "pytest==8.4.1"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = true

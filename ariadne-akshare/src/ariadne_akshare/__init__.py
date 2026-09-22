@@ -1,0 +1,1 @@
+"""AKShare NAV adapter."""
