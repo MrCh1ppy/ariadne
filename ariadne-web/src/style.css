@@ -302,8 +302,20 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
 
 /* ---- 通知 ---- */
 .notice { border-radius: 10px; padding: 11px 14px; font-size: 13px; line-height: 1.6; }
-.error-notice { color: #a73b45; background: #fff1f1; border: 1px solid #f3d5d7; margin: 0 0 18px; }
-.warning-notice { color: #7a5b16; background: #fff9e8; border: 1px solid #f1e2b6; margin-top: 14px; }
+.error-notice { color: #a73b45; background: #fff1f1; border: 1px solid #f3d5d7; }
+.warning-notice { color: #7a5b16; background: #fff9e8; border: 1px solid #f1e2b6; }
+.toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 30;
+  width: min(420px, calc(100% - 48px));
+  margin: 0;
+  box-shadow: 0 12px 30px rgba(26, 55, 86, 0.16);
+}
+.warning-notice.toast { top: 86px; }
+.toast-enter-active, .toast-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(-8px); }
 .empty-state { display: grid; place-items: center; height: 300px; color: #8493a1; }
 
 /* ---- 响应式 ---- */

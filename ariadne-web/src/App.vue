@@ -17,11 +17,38 @@ const endDate = ref(initialDateRange.endDate)
 const searchBusy = ref(false)
 const analysisBusy = ref(false)
 const error = ref('')
+const warningToast = ref('')
 const hint = ref('输入至少 3 位基金代码前缀；结果过多时继续输入完整代码')
 const highlighted = ref(-1)
 const searchGate = new RequestGate()
 const analysisGate = new RequestGate()
 let debounceTimer: ReturnType<typeof setTimeout> | undefined
+let errorToastTimer: ReturnType<typeof setTimeout> | undefined
+let warningToastTimer: ReturnType<typeof setTimeout> | undefined
+
+function clearErrorToast(): void {
+  window.clearTimeout(errorToastTimer)
+  errorToastTimer = undefined
+  error.value = ''
+}
+
+function showError(message: string): void {
+  window.clearTimeout(errorToastTimer)
+  error.value = message
+  errorToastTimer = window.setTimeout(clearErrorToast, 4000)
+}
+
+function clearWarningToast(): void {
+  window.clearTimeout(warningToastTimer)
+  warningToastTimer = undefined
+  warningToast.value = ''
+}
+
+function showWarning(message: string): void {
+  window.clearTimeout(warningToastTimer)
+  warningToast.value = message
+  warningToastTimer = window.setTimeout(clearWarningToast, 5000)
+}
 
 const showDropdown = computed(() => suggestions.value.length > 0 && !selected.value)
 const dateRangeInvalid = computed(() => startDate.value > endDate.value)
@@ -40,7 +67,8 @@ function onInput(event: Event): void {
   analysis.value = null
   analysisGate.cancel()
   analysisBusy.value = false
-  error.value = ''
+  clearErrorToast()
+  clearWarningToast()
   highlighted.value = -1
   window.clearTimeout(debounceTimer)
   searchGate.cancel()
@@ -60,12 +88,12 @@ async function runSearch(prefix: string): Promise<void> {
     const result = await searchFunds(prefix, request.signal)
     if (!searchGate.isCurrent(request.id)) return
     suggestions.value = result
-    hint.value = result.length ? '请选择基金；结果最多显示 20 只，找不到时请继续输入完整代码' : '没有找到匹配的基金代码'
+    hint.value = result.length ? '' : '没有找到匹配的基金代码'
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === 'AbortError') return
     if (searchGate.isCurrent(request.id)) {
       suggestions.value = []
-      error.value = cause instanceof Error ? cause.message : '搜索失败，请稍后重试。'
+      showError(cause instanceof Error ? cause.message : '搜索失败，请稍后重试。')
     }
   } finally {
     if (searchGate.isCurrent(request.id)) searchBusy.value = false
@@ -114,20 +142,30 @@ async function runAnalysis(): Promise<void> {
   analysisGate.cancel()
   const request = analysisGate.next()
   analysisBusy.value = true
-  error.value = ''
+  clearErrorToast()
+  clearWarningToast()
   analysis.value = null
   try {
     const result = await loadAnalysis(selected.value.fundCode, startDate.value, endDate.value, request.signal)
-    if (analysisGate.isCurrent(request.id)) analysis.value = result
+    if (analysisGate.isCurrent(request.id)) {
+      analysis.value = result
+      if (result.warnings.length) showWarning(result.warnings.join('；'))
+    }
   } catch (cause) {
     if (cause instanceof DOMException && cause.name === 'AbortError') return
-    if (analysisGate.isCurrent(request.id)) error.value = cause instanceof Error ? cause.message : '分析失败，请稍后重试。'
+    if (analysisGate.isCurrent(request.id)) showError(cause instanceof Error ? cause.message : '分析失败，请稍后重试。')
   } finally {
     if (analysisGate.isCurrent(request.id)) analysisBusy.value = false
   }
 }
 
-onBeforeUnmount(() => { window.clearTimeout(debounceTimer); searchGate.cancel(); analysisGate.cancel() })
+onBeforeUnmount(() => {
+  window.clearTimeout(debounceTimer)
+  window.clearTimeout(errorToastTimer)
+  window.clearTimeout(warningToastTimer)
+  searchGate.cancel()
+  analysisGate.cancel()
+})
 watch([startDate, endDate], () => { if (selected.value && !dateRangeInvalid.value) void runAnalysis() })
 </script>
 
@@ -199,7 +237,12 @@ watch([startDate, endDate], () => { if (selected.value && !dateRangeInvalid.valu
       <span v-if="dateRangeInvalid" id="date-range-error" class="field-error" role="alert">开始日期不能晚于结束日期，请调整。</span>
     </section>
 
-    <p v-if="error" class="notice error-notice" role="alert">{{ error }}</p>
+    <Transition name="toast">
+      <p v-if="error" class="notice toast error-notice" role="alert" aria-live="assertive">{{ error }}</p>
+    </Transition>
+    <Transition name="toast">
+      <p v-if="warningToast" class="notice toast warning-notice" role="alert" aria-live="polite">{{ warningToast }}</p>
+    </Transition>
 
     <section v-if="analysis" class="chart-card" aria-live="polite">
       <div class="chart-heading">
@@ -215,7 +258,6 @@ watch([startDate, endDate], () => { if (selected.value && !dateRangeInvalid.valu
       <NavChart v-if="analysis.points.length" :analysis="analysis" />
       <div v-else class="empty-state">所选范围没有交易日数据，请调整日期。</div>
       <div class="chart-footnote">MA30 / MA60 分别为当前及此前 29 / 59 个 A 股交易日净值的平均值；缺失窗口保持为空，不填充或插值。相对均线百分比不是实际投资收益率。</div>
-      <div v-if="analysis.warnings.length" class="notice warning-notice">{{ analysis.warnings.join('；') }}</div>
     </section>
 
     <section v-else-if="analysisBusy" class="loading-card chart-card" aria-busy="true" aria-label="数据加载中">
