@@ -6,7 +6,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.ariadne.analysis.AnalysisPoint;
+import com.ariadne.analysis.FundAnalysis;
 import com.ariadne.analysis.FundAnalysisService;
+import com.ariadne.analysis.MaPeriod;
+import com.ariadne.analysis.MaValue;
 import com.ariadne.extraction.Fund;
 import com.ariadne.extraction.FundNav;
 import com.ariadne.extraction.FundNavId;
@@ -16,6 +20,7 @@ import com.ariadne.extraction.UpstreamException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -65,5 +70,43 @@ class FundControllerTest {
         when(service.getHistory("022485", "2025-01-02", "2025-01-02")).thenThrow(new UpstreamException("connection refused: secret-host"));
         mvc.perform(get("/funds/022485/navs").param("startDate", "2025-01-02").param("endDate", "2025-01-02"))
                 .andExpect(status().isBadGateway()).andExpect(jsonPath("$.message", is("upstream unavailable")));
+    }
+
+    @Test
+    void exposesTheAnalysisRouteWithMovingAveragesAndRequestedPeriods() throws Exception {
+        var analysis = org.mockito.Mockito.mock(FundAnalysisService.class);
+        var point = new AnalysisPoint(LocalDate.of(2026, 9, 22), "1.4566000000",
+                java.util.Map.of(MaPeriod.MA30, new MaValue("1.4564866667", "0.01")));
+        when(analysis.analyze("022485", "2026-08-25", "2026-09-22", Set.of(MaPeriod.MA30)))
+                .thenReturn(new FundAnalysis("022485", LocalDate.of(2026, 8, 25), LocalDate.of(2026, 9, 22),
+                        List.of(point), List.of()));
+        var mvc = MockMvcBuilders.standaloneSetup(new FundController(org.mockito.Mockito.mock(FundService.class),
+                org.mockito.Mockito.mock(FundSearchService.class), analysis)).setControllerAdvice(new ApiExceptionHandler()).build();
+
+        mvc.perform(get("/funds/022485/analysis")
+                        .param("startDate", "2026-08-25")
+                        .param("endDate", "2026-09-22")
+                        .param("periods", "MA30"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.points[0].unitNav", is("1.4566000000")))
+                .andExpect(jsonPath("$.points[0].movingAverages.MA30.value", is("1.4564866667")))
+                .andExpect(jsonPath("$.points[0].movingAverages.MA30.deviationPercent", is("0.01")))
+                .andExpect(jsonPath("$.points[0].ma30", is("1.4564866667")))
+                .andExpect(jsonPath("$.points[0].navVsMa30Percent", is("0.01")));
+        org.mockito.Mockito.verify(analysis).analyze("022485", "2026-08-25", "2026-09-22", Set.of(MaPeriod.MA30));
+    }
+
+    @Test
+    void rejectsInvalidPeriodName() throws Exception {
+        var mvc = MockMvcBuilders.standaloneSetup(new FundController(org.mockito.Mockito.mock(FundService.class),
+                org.mockito.Mockito.mock(FundSearchService.class), org.mockito.Mockito.mock(FundAnalysisService.class)))
+                .setControllerAdvice(new ApiExceptionHandler()).build();
+
+        mvc.perform(get("/funds/022485/analysis")
+                        .param("startDate", "2026-08-25")
+                        .param("endDate", "2026-09-22")
+                        .param("periods", "MA999"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", is("invalid MA period: MA999")));
     }
 }

@@ -14,10 +14,13 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -25,7 +28,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class FundAnalysisService {
     private static final ZoneId SHANGHAI = ZoneId.of("Asia/Shanghai");
-    private static final BigDecimal WINDOW_SIZE = BigDecimal.valueOf(30);
+    private static final Set<MaPeriod> DEFAULT_PERIODS = Set.of(MaPeriod.MA30, MaPeriod.MA60);
     private final FundService fundService;
     private final FundSource source;
     private final Clock clock;
@@ -48,6 +51,14 @@ public class FundAnalysisService {
     }
 
     public FundAnalysis analyze(String fundCode, String startDate, String endDate) {
+        return analyze(fundCode, startDate, endDate, DEFAULT_PERIODS);
+    }
+
+    public FundAnalysis analyze(String fundCode, String startDate, String endDate, Set<MaPeriod> requestedPeriods) {
+        var selected = new LinkedHashSet<MaPeriod>(requestedPeriods);
+        if (selected.isEmpty()) throw new BadRequestException("at least one MA period is required");
+        var maxWindow = selected.stream().mapToInt(MaPeriod::window).max().orElseThrow();
+
         var request = validate(fundCode, startDate, endDate);
         var calendar = source.getTradeDates(minimumStartDate, request.endDate());
         validateCalendar(calendar, request.endDate());
@@ -60,29 +71,37 @@ public class FundAnalysisService {
         }
 
         var firstDisplayIndex = allTradeDates.indexOf(displayDates.getFirst());
-        if (firstDisplayIndex < 29) {
-            throw new BadRequestException("MA30 calculation window precedes minimum start date");
+        if (firstDisplayIndex < maxWindow - 1) {
+            throw new BadRequestException("MA" + maxWindow + " calculation window precedes minimum start date");
         }
-        var windowStart = allTradeDates.get(firstDisplayIndex - 29);
+        var windowStart = allTradeDates.get(firstDisplayIndex - maxWindow + 1);
         var navs = fundService.getHistory(fundCode, windowStart.toString(), request.endDate().toString());
         var values = new HashMap<LocalDate, BigDecimal>();
         for (FundNav nav : navs) values.put(nav.id().navDate(), nav.unitNav());
 
         var points = new ArrayList<AnalysisPoint>();
         var missingNavDays = 0;
-        var unavailableMaDays = 0;
+        var unavailable = new EnumMap<MaPeriod, Integer>(MaPeriod.class);
+        for (var period : selected) unavailable.put(period, 0);
         for (var day : displayDates) {
             var nav = values.get(day);
             if (nav == null) missingNavDays++;
             var index = allTradeDates.indexOf(day);
-            var window = allTradeDates.subList(index - 29, index + 1);
-            var complete = window.stream().allMatch(values::containsKey);
-            if (!complete) unavailableMaDays++;
-            points.add(new AnalysisPoint(day, decimal(nav), complete ? mean(window, values) : null));
+            var movingAverages = new EnumMap<MaPeriod, MaValue>(MaPeriod.class);
+            for (var period : selected) {
+                var window = allTradeDates.subList(index - period.window() + 1, index + 1);
+                var average = window.stream().allMatch(values::containsKey) ? mean(window, values) : null;
+                if (average == null) unavailable.compute(period, (key, count) -> count + 1);
+                movingAverages.put(period, new MaValue(decimal(average), navVsMaPercent(nav, average)));
+            }
+            points.add(new AnalysisPoint(day, decimal(nav), movingAverages));
         }
         var warnings = new ArrayList<String>();
         if (missingNavDays > 0) warnings.add("NAV missing for " + missingNavDays + " trading day(s)");
-        if (unavailableMaDays > 0) warnings.add("MA30 unavailable for " + unavailableMaDays + " point(s)");
+        for (var period : selected) {
+            var count = unavailable.get(period);
+            if (count > 0) warnings.add(period.name() + " unavailable for " + count + " point(s)");
+        }
         return new FundAnalysis(fundCode, request.startDate(), request.endDate(), points, warnings);
     }
 
@@ -90,9 +109,15 @@ public class FundAnalysisService {
         return value == null ? null : value.toPlainString();
     }
 
-    private static String mean(List<LocalDate> window, Map<LocalDate, BigDecimal> values) {
+    private static BigDecimal mean(List<LocalDate> window, Map<LocalDate, BigDecimal> values) {
         var sum = window.stream().map(values::get).reduce(BigDecimal.ZERO, BigDecimal::add);
-        return sum.divide(WINDOW_SIZE, 10, RoundingMode.HALF_UP).toPlainString();
+        return sum.divide(BigDecimal.valueOf(window.size()), 10, RoundingMode.HALF_UP);
+    }
+
+    static String navVsMaPercent(BigDecimal nav, BigDecimal ma) {
+        if (nav == null || ma == null || ma.signum() <= 0) return null;
+        return nav.subtract(ma).multiply(BigDecimal.valueOf(100))
+                .divide(ma, 2, RoundingMode.HALF_UP).toPlainString();
     }
 
     private void validateCalendar(RemoteTradeCalendar calendar, LocalDate endDate) {

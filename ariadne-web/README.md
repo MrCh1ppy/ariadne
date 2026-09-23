@@ -21,7 +21,7 @@ The browser calls `/api/funds/search?prefix=022` and `/api/funds/{fundCode}/anal
 
 The deployed static site is served by the `ecs-user` user unit `ariadne-web.service` at `127.0.0.1:18081`. Its nginx configuration is `/home/ecs-user/ariadne-web/nginx.conf`; the static files are under `/home/ecs-user/ariadne-web/dist`. It proxies `/api/` to the Java service at `127.0.0.1:18080` and does not modify the system nginx instance.
 
-The same isolated nginx instance also listens on `0.0.0.0:5081` for the public reverse proxy URL `http://example.com:5081/`. The host `firewalld` public zone permits only the additional `5081/tcp` port for this site; the cloud security group must separately allow inbound TCP 5081.
+The same isolated nginx instance also listens on `0.0.0.0:5081` for the public reverse proxy URL `http://<public-host>:5081/`. The host `firewalld` public zone permits only the additional `5081/tcp` port for this site; the cloud security group must separately allow inbound TCP 5081.
 
 ```sh
 systemctl --user status ariadne-web.service

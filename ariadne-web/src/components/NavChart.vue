@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import type { FundAnalysis } from '../types'
+import { formatNavTooltip } from '../lib/formatNavTooltip'
 
 const props = defineProps<{ analysis: FundAnalysis }>()
 const chartEl = ref<HTMLDivElement>()
@@ -14,15 +15,6 @@ let motionListener: ((event: MediaQueryListEvent) => void) | undefined
 const isNarrow = ref(false)
 let widthQuery: MediaQueryList | undefined
 let widthListener: ((event: MediaQueryListEvent) => void) | undefined
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;')
-}
 
 const legendLayout = computed(() =>
   isNarrow.value
@@ -37,7 +29,7 @@ function render(): void {
   chart.setOption({
     animation: !prefersReducedMotion.value,
     animationDuration: 450,
-    color: ['#1b5f9e', '#0a9f98'],
+    color: ['#1b5f9e', '#0a9f98', '#8670af'],
     grid: { left: 12, right: 20, top: 56, bottom: 32, containLabel: true },
     legend: {
       ...legendLayout.value,
@@ -70,14 +62,7 @@ function render(): void {
         const entries = items as Array<{ axisValue: string }>
         const point = byDate.get(entries[0]?.axisValue)
         if (!point) return ''
-        const date = escapeHtml(String(point.date))
-        const unitNav = point.unitNav === null ? '暂无' : escapeHtml(String(point.unitNav))
-        const ma30 = point.ma30 === null ? '暂无' : escapeHtml(String(point.ma30))
-        return [
-          `<div style="font-weight:700;margin-bottom:2px">${date}</div>`,
-          `<div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1b5f9e;margin-right:6px"></span>单位净值：${unitNav}</div>`,
-          `<div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#0a9f98;margin-right:6px"></span>MA30：${ma30}</div>`,
-        ].join('')
+        return formatNavTooltip(point)
       },
     },
     xAxis: {
@@ -123,6 +108,17 @@ function render(): void {
         emphasis: { lineStyle: { width: 4 } },
         z: 3,
       },
+      {
+        name: 'MA60',
+        type: 'line',
+        data: points.map((point) => (point.ma60 === null ? null : Number(point.ma60))),
+        showSymbol: false,
+        smooth: false,
+        connectNulls: false,
+        lineStyle: { width: 2, type: 'dashed' },
+        emphasis: { lineStyle: { width: 3 } },
+        z: 1,
+      },
     ],
   }, true)
 }
@@ -156,5 +152,5 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="chartEl" class="chart" role="img" aria-label="单位净值与MA30走势图" />
+  <div ref="chartEl" class="chart" role="img" aria-label="单位净值与MA30、MA60走势图" />
 </template>

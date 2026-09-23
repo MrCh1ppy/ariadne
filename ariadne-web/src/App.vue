@@ -214,7 +214,7 @@ watch([startDate, endDate], () => { if (selected.value && !dateRangeInvalid.valu
       </div>
       <NavChart v-if="analysis.points.length" :analysis="analysis" />
       <div v-else class="empty-state">所选范围没有交易日数据，请调整日期。</div>
-      <div class="chart-footnote">MA30 = 当前及此前 29 个 A 股交易日净值的平均值；缺失窗口保持为空，不填充或插值。</div>
+      <div class="chart-footnote">MA30 / MA60 分别为当前及此前 29 / 59 个 A 股交易日净值的平均值；缺失窗口保持为空，不填充或插值。相对均线百分比不是实际投资收益率。</div>
       <div v-if="analysis.warnings.length" class="notice warning-notice">{{ analysis.warnings.join('；') }}</div>
     </section>
 
