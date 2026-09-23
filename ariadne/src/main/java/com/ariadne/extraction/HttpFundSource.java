@@ -8,6 +8,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,42 @@ public class HttpFundSource implements FundSource {
     @Override
     public List<RemoteFundNav> getHistory(String fundCode, LocalDate startDate, LocalDate endDate) {
         return read("/funds/" + fundCode + "/navs?startDate=" + startDate + "&endDate=" + endDate, new TypeReference<>() {});
+    }
+
+    @Override
+    public RemoteTradeCalendar getTradeDates(LocalDate startDate, LocalDate endDate) {
+        var request = HttpRequest.newBuilder(URI.create(baseUrl + "/trade-dates?startDate=" + startDate + "&endDate=" + endDate))
+                .timeout(timeout).GET().build();
+        try {
+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new UpstreamException("Python adapter returned HTTP " + response.statusCode());
+            }
+            var calendar = objectMapper.readValue(response.body(), RemoteTradeCalendar.class);
+            validateCalendar(calendar, startDate, endDate);
+            return calendar;
+        } catch (UpstreamException exception) {
+            throw exception;
+        } catch (Exception exception) {
+            throw new UpstreamException("Python adapter request failed", exception);
+        }
+    }
+
+    private static void validateCalendar(RemoteTradeCalendar calendar, LocalDate startDate, LocalDate endDate) {
+        if (calendar == null || calendar.coverageStart() == null || calendar.coverageEnd() == null || calendar.tradeDates() == null
+                || calendar.coverageStart().isAfter(calendar.coverageEnd())
+                || startDate.isBefore(calendar.coverageStart()) || endDate.isAfter(calendar.coverageEnd())) {
+            throw new UpstreamException("Python adapter returned invalid trade calendar");
+        }
+        var seen = new HashSet<LocalDate>();
+        LocalDate previous = null;
+        for (var tradeDate : calendar.tradeDates()) {
+            if (tradeDate == null || tradeDate.isBefore(startDate) || tradeDate.isAfter(endDate)
+                    || (previous != null && !previous.isBefore(tradeDate)) || !seen.add(tradeDate)) {
+                throw new UpstreamException("Python adapter returned invalid trade calendar");
+            }
+            previous = tradeDate;
+        }
     }
 
     private <T> List<T> read(String path, TypeReference<List<T>> type) {

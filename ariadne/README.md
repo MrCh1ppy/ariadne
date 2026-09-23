@@ -15,7 +15,11 @@ JAVA_HOME=/usr/lib/jvm/java-25-openjdk ./gradlew bootRun
 ## API
 
 * `GET /funds/{fundCode}/navs?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
+* `GET /funds/search?prefix=022`
+* `GET /funds/{fundCode}/analysis?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
 * `POST /funds/refresh`
 * `POST /funds/{fundCode}/navs/refresh?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
 
 The accepted date range is 2025-01-01 through today's date in `Asia/Shanghai` (override the lower bound with `ARIADNE_MINIMUM_START_DATE`). Uncovered ranges are fetched, persisted, then cached only after success.
+
+`/funds/search` accepts a three-to-six-digit code prefix, returns at most 20 funds in code order, and lazily refreshes the catalogue only when the local fund directory is empty. The legacy `suffix` query parameter is accepted for cached older frontend bundles but still uses prefix matching; new clients should send `prefix`. If both are supplied, they must be identical. Results may be truncated for short prefixes; continue typing to narrow them (for example, `prefix=022485` selects `022485`). Matching is against the start of the code, so `prefix=022` matches `022485`, not `002248`. Analysis points contain only trading days. `ma30` is the arithmetic mean of the current and previous 29 A-share trading-day NAVs, rounded to scale 10 with `HALF_UP`; it is null when any value in that window is missing.

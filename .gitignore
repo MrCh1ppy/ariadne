@@ -9,3 +9,5 @@ dist/
 .coverage
 .gradle/
 build/
+ariadne-web/node_modules/
+ariadne-web/dist/

@@ -1,0 +1,160 @@
+<script setup lang="ts">
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import * as echarts from 'echarts'
+import type { FundAnalysis } from '../types'
+
+const props = defineProps<{ analysis: FundAnalysis }>()
+const chartEl = ref<HTMLDivElement>()
+let chart: echarts.ECharts | undefined
+
+const prefersReducedMotion = ref(false)
+let motionQuery: MediaQueryList | undefined
+let motionListener: ((event: MediaQueryListEvent) => void) | undefined
+
+const isNarrow = ref(false)
+let widthQuery: MediaQueryList | undefined
+let widthListener: ((event: MediaQueryListEvent) => void) | undefined
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+const legendLayout = computed(() =>
+  isNarrow.value
+    ? { top: 4, left: 0, orient: 'horizontal' as const, itemGap: 14 }
+    : { top: 4, right: 4, itemGap: 24 },
+)
+
+function render(): void {
+  if (!chart) return
+  const points = props.analysis.points
+  const byDate = new Map(points.map((point) => [point.date, point]))
+  chart.setOption({
+    animation: !prefersReducedMotion.value,
+    animationDuration: 450,
+    color: ['#1b5f9e', '#0a9f98'],
+    grid: { left: 12, right: 20, top: 56, bottom: 32, containLabel: true },
+    legend: {
+      ...legendLayout.value,
+      textStyle: { color: '#5c6d81', fontSize: 12 },
+      inactiveColor: '#b8c4cf',
+      itemWidth: 18,
+      itemHeight: 3,
+      icon: 'roundRect',
+    },
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      backgroundColor: 'rgba(8, 27, 51, 0.94)',
+      borderWidth: 0,
+      padding: [10, 14],
+      textStyle: { color: '#eef4f8', fontSize: 12, lineHeight: 20 },
+      axisPointer: {
+        type: 'cross',
+        crossStyle: { color: '#94a6b8', width: 1, type: 'dashed' },
+        lineStyle: { color: '#94a6b8', width: 1, type: 'dashed' },
+        label: {
+          show: true,
+          backgroundColor: '#0b3157',
+          color: '#eef4f8',
+          fontSize: 11,
+          padding: [3, 6],
+        },
+      },
+      formatter: (items: unknown) => {
+        const entries = items as Array<{ axisValue: string }>
+        const point = byDate.get(entries[0]?.axisValue)
+        if (!point) return ''
+        const date = escapeHtml(String(point.date))
+        const unitNav = point.unitNav === null ? '暂无' : escapeHtml(String(point.unitNav))
+        const ma30 = point.ma30 === null ? '暂无' : escapeHtml(String(point.ma30))
+        return [
+          `<div style="font-weight:700;margin-bottom:2px">${date}</div>`,
+          `<div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#1b5f9e;margin-right:6px"></span>单位净值：${unitNav}</div>`,
+          `<div><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:#0a9f98;margin-right:6px"></span>MA30：${ma30}</div>`,
+        ].join('')
+      },
+    },
+    xAxis: {
+      type: 'category',
+      name: '交易日',
+      nameLocation: 'middle',
+      nameGap: 26,
+      nameTextStyle: { color: '#8a99a8', fontSize: 11 },
+      data: points.map((point) => point.date),
+      boundaryGap: false,
+      axisLine: { lineStyle: { color: '#cfdae4' } },
+      axisTick: { show: false },
+      axisLabel: { color: '#718096', fontSize: 11, hideOverlap: true },
+    },
+    yAxis: {
+      type: 'value',
+      name: '净值（元）',
+      nameTextStyle: { color: '#8a99a8', fontSize: 11, align: 'left' },
+      scale: true,
+      axisLabel: { color: '#718096', fontSize: 11 },
+      splitLine: { lineStyle: { color: '#e6edf3' } },
+    },
+    series: [
+      {
+        name: '单位净值',
+        type: 'line',
+        data: points.map((point) => (point.unitNav === null ? null : Number(point.unitNav))),
+        showSymbol: false,
+        smooth: false,
+        connectNulls: false,
+        lineStyle: { width: 1.5 },
+        emphasis: { lineStyle: { width: 2.5 } },
+        z: 2,
+      },
+      {
+        name: 'MA30',
+        type: 'line',
+        data: points.map((point) => (point.ma30 === null ? null : Number(point.ma30))),
+        showSymbol: false,
+        smooth: false,
+        connectNulls: false,
+        lineStyle: { width: 3, shadowColor: 'rgba(10, 159, 152, 0.25)', shadowBlur: 6, shadowOffsetY: 2 },
+        emphasis: { lineStyle: { width: 4 } },
+        z: 3,
+      },
+    ],
+  }, true)
+}
+
+function resize(): void { chart?.resize() }
+
+onMounted(async () => {
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  prefersReducedMotion.value = motionQuery.matches
+  motionListener = (event: MediaQueryListEvent) => { prefersReducedMotion.value = event.matches }
+  motionQuery.addEventListener('change', motionListener)
+
+  widthQuery = window.matchMedia('(max-width: 780px)')
+  isNarrow.value = widthQuery.matches
+  widthListener = (event: MediaQueryListEvent) => { isNarrow.value = event.matches }
+  widthQuery.addEventListener('change', widthListener)
+
+  await nextTick()
+  if (chartEl.value) chart = echarts.init(chartEl.value)
+  render()
+  window.addEventListener('resize', resize)
+})
+watch(() => props.analysis, render, { deep: true })
+watch([prefersReducedMotion, isNarrow], render)
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', resize)
+  if (motionQuery && motionListener) motionQuery.removeEventListener('change', motionListener)
+  if (widthQuery && widthListener) widthQuery.removeEventListener('change', widthListener)
+  chart?.dispose()
+})
+</script>
+
+<template>
+  <div ref="chartEl" class="chart" role="img" aria-label="单位净值与MA30走势图" />
+</template>

@@ -29,6 +29,30 @@ public class FundPersistence {
                 )).list();
     }
 
+    public List<Fund> searchFunds(String prefix) {
+        return jdbcClient.sql("""
+                SELECT fund_code, fund_name, fund_type, pinyin_abbreviation, pinyin_full_name
+                FROM fund
+                WHERE btrim(fund_code) LIKE :prefix
+                ORDER BY fund_code
+                LIMIT 20
+                """)
+                .param("prefix", prefix + "%")
+                .query((rs, rowNum) -> new Fund(
+                        rs.getString("fund_code").trim(),
+                        rs.getString("fund_name"),
+                        rs.getString("fund_type"),
+                        rs.getString("pinyin_abbreviation"),
+                        rs.getString("pinyin_full_name")
+                )).list();
+    }
+
+    public boolean isFundDirectoryEmpty() {
+        return jdbcClient.sql("SELECT COUNT(*) = 0 FROM fund")
+                .query(Boolean.class)
+                .single();
+    }
+
     public void upsertFunds(List<Fund> funds) {
         for (Fund fund : funds) {
             jdbcClient.sql("""

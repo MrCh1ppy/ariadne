@@ -56,4 +56,15 @@ class PostgresPersistenceIntegrationTest {
         assertThrows(DataIntegrityViolationException.class, () -> persistence.upsertNavs(List.of(
                 new FundNav(new FundNavId("999999", LocalDate.of(2025, 1, 2)), BigDecimal.ONE))));
     }
+
+    @Test
+    void searchesFundCodesByPrefixNotSuffix() {
+        persistence.upsertFunds(List.of(
+                new Fund("022485", "Prefix Match", null, null, null),
+                new Fund("002248", "Not a Prefix Match", null, null, null)));
+
+        assertEquals(List.of("022485"), persistence.searchFunds("022").stream().map(Fund::fundCode).toList());
+        assertEquals(List.of("022485"), persistence.searchFunds("022485").stream().map(Fund::fundCode).toList());
+        assertEquals(List.of(), persistence.searchFunds("485"));
+    }
 }

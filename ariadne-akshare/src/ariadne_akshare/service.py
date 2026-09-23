@@ -11,6 +11,7 @@ from fastapi import HTTPException
 class NavProvider(Protocol):
     def history(self, fund_code: str) -> pd.DataFrame: ...
     def funds(self) -> pd.DataFrame: ...
+    def trade_dates(self) -> pd.DataFrame: ...
 
 
 class AkshareProvider:
@@ -25,6 +26,13 @@ class AkshareProvider:
         try:
             import akshare as ak
             return ak.fund_open_fund_info_em(symbol=fund_code, indicator="单位净值走势")
+        except Exception as exc:
+            raise HTTPException(502, "upstream request error") from exc
+
+    def trade_dates(self) -> pd.DataFrame:
+        try:
+            import akshare as ak
+            return ak.tool_trade_date_hist_sina()
         except Exception as exc:
             raise HTTPException(502, "upstream request error") from exc
 
@@ -70,6 +78,43 @@ def read_history(provider: NavProvider, fund_code: str, start: date, end: date) 
         for day in sorted(seen)
         if start <= day <= end
     ]
+
+
+def read_trade_dates(provider: NavProvider, start: date, end: date) -> dict[str, object]:
+    try:
+        frame = provider.trade_dates()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(502, "upstream request error") from exc
+    if "trade_date" not in frame.columns:
+        raise HTTPException(502, "upstream data error")
+    dates: set[date] = set()
+    for raw_date in frame["trade_date"].tolist():
+        try:
+            if raw_date is None or bool(pd.isna(raw_date)):
+                raise ValueError
+            if isinstance(raw_date, pd.Timestamp):
+                parsed = raw_date.date()
+            elif isinstance(raw_date, date):
+                parsed = raw_date
+            elif isinstance(raw_date, str):
+                parsed = date.fromisoformat(raw_date)
+            else:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise HTTPException(502, "upstream data error") from None
+        dates.add(parsed)
+    if not dates:
+        raise HTTPException(502, "upstream data error")
+    ordered = sorted(dates)
+    if start < ordered[0] or end > ordered[-1]:
+        raise HTTPException(502, "trade date coverage unavailable")
+    return {
+        "coverageStart": ordered[0],
+        "coverageEnd": ordered[-1],
+        "tradeDates": [day for day in ordered if start <= day <= end],
+    }
 
 
 def read_funds(provider: NavProvider) -> list[dict[str, str | None]]:

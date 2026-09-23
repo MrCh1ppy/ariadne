@@ -5,7 +5,7 @@ from decimal import Decimal
 from fastapi import FastAPI, HTTPException, Path, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from .service import AkshareProvider, read_funds, read_history
+from .service import AkshareProvider, read_funds, read_history, read_trade_dates
 
 app = FastAPI(title="Ariadne AKShare adapter")
 provider = AkshareProvider()
@@ -57,6 +57,12 @@ class Fund(BaseModel):
     pinyinFullName: str | None
 
 
+class TradeDates(BaseModel):
+    coverageStart: date
+    coverageEnd: date
+    tradeDates: list[date]
+
+
 @app.get("/funds/{fundCode}/navs", response_model=list[Nav])
 def navs(
     fund_code: Code,
@@ -70,3 +76,12 @@ def navs(
 @app.get("/funds", response_model=list[Fund])
 def funds() -> list[Fund]:
     return [Fund.model_validate(item) for item in read_funds(provider)]
+
+
+@app.get("/trade-dates", response_model=TradeDates)
+def trade_dates(startDate: Day, endDate: Day) -> TradeDates:
+    start, end = parse_day(startDate), parse_day(endDate)
+    if start > end:
+        raise HTTPException(422, "startDate must be no later than endDate")
+    dates = Range(startDate=start, endDate=end)
+    return TradeDates.model_validate(read_trade_dates(provider, dates.startDate, dates.endDate))
