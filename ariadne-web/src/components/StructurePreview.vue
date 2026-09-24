@@ -56,7 +56,7 @@ function render(): void {
       lineStyle: { color: dark ? '#9ec8e2' : '#1b5f9e', width: 1.8 },
       itemStyle: { color: (params: { dataIndex: number }) => STRUCTURE_COLORS[STRUCTURE_SERIES[params.dataIndex] ?? '单位净值'] },
       label: {
-        show: true,
+        show: false,
         position: 'top',
         distance: 5,
         fontSize: 10,
@@ -84,11 +84,14 @@ watch(chartEl, (el, previous) => {
 onBeforeUnmount(() => { chart?.dispose(); chart = undefined })
 
 const title = computed(() => `${props.structure.date} 结构预览`)
+const columns = computed(() => props.structure.entries)
 const comparisons = computed(() => {
   const nav = props.structure.entries.find((entry) => entry.name === '单位净值')?.value ?? null
-  return props.structure.entries.filter((entry) => entry.name !== '单位净值').map((entry) => ({
+  return props.structure.entries.map((entry) => ({
     name: entry.name,
-    text: formatRelativeNavPercent(entry.value, nav),
+    text: entry.name === '单位净值'
+      ? (entry.value === null ? '—' : '基准')
+      : formatRelativeNavPercent(entry.value, nav),
   }))
 })
 </script>
@@ -125,8 +128,11 @@ const comparisons = computed(() => {
     <div ref="chartEl" class="preview-chart" aria-hidden="true" />
     <table class="preview-comparison">
       <caption>均线相对净值（MA − NAV）/ NAV × 100%</caption>
-      <thead><tr><th scope="col">相对净值</th><th v-for="item in comparisons" :key="item.name" scope="col">{{ item.name }}</th></tr></thead>
-      <tbody><tr><th scope="row">百分比</th><td v-for="item in comparisons" :key="item.name">{{ item.text }}</td></tr></tbody>
+      <thead><tr><th scope="col">相对净值</th><th v-for="item in columns" :key="item.name" scope="col">{{ item.name }}</th></tr></thead>
+      <tbody>
+        <tr class="preview-absolute"><th scope="row">绝对值</th><td v-for="item in columns" :key="item.name">{{ formatStructureValue(item.value) }}</td></tr>
+        <tr class="preview-percent"><th scope="row">百分比</th><td v-for="item in comparisons" :key="item.name">{{ item.text }}</td></tr>
+      </tbody>
     </table>
     <table class="visually-hidden">
       <caption>{{ title }}（按 MA120 到 MA5、单位净值顺序）</caption>
@@ -189,6 +195,12 @@ const comparisons = computed(() => {
 .preview-comparison caption { caption-side: top; text-align: left; font-size: 10px; }
 .preview-comparison th, .preview-comparison td { padding: 2px 1px; white-space: nowrap; }
 .preview-comparison th { font-weight: 600; }
+.preview-comparison .preview-absolute td,
+.preview-comparison .preview-percent td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
 
 .structure-preview.narrow {
   position: relative;
