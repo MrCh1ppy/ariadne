@@ -8,6 +8,7 @@ import {
   hasAnyValue,
   locateCategoryIndex,
   reconcilePinned,
+  relativeNavValuesOf,
   valuesOf,
 } from './maStructure'
 
@@ -64,6 +65,24 @@ describe('maStructure builder', () => {
     expect(formatRelativeNavPercent(null, 1)).toBe('—')
     expect(formatRelativeNavPercent(1, 0)).toBe('—')
     expect(formatRelativeNavPercent(0.999999, 1)).toBe('0.00%')
+  })
+
+  it('builds five MA percentage bars and keeps missing or zero-NAV values null', () => {
+    const values = relativeNavValuesOf(buildMaStructure(point('2026-09-22', '1.00', {
+      MA120: { value: '1.10', deviationPercent: '999.00' },
+      MA60: { value: '0.90', deviationPercent: '-999.00' },
+      MA30: { value: '1.00', deviationPercent: null },
+      MA15: { value: null, deviationPercent: null },
+      MA5: { value: '1.05', deviationPercent: null },
+    })))
+    expect(values[0]).toBeCloseTo(10)
+    expect(values[1]).toBeCloseTo(-10)
+    expect(values[2]).toBe(0)
+    expect(values[3]).toBeNull()
+    expect(values[4]).toBeCloseTo(5)
+    expect(relativeNavValuesOf(buildMaStructure(point('2026-09-22', '0', {
+      MA120: { value: '1.10', deviationPercent: null },
+    })))).toEqual([null, null, null, null, null])
   })
 })
 

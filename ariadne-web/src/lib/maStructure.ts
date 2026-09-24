@@ -40,6 +40,17 @@ export function valuesOf(structure: MaStructure): (number | null)[] {
   return structure.entries.map((entry) => entry.value)
 }
 
+export function relativeNavValuesOf(structure: MaStructure): (number | null)[] {
+  const nav = structure.entries.find((entry) => entry.name === '单位净值')?.value ?? null
+  return structure.entries
+    .filter((entry) => entry.name !== '单位净值')
+    .map((entry) => {
+      if (entry.value === null || nav === null || nav === 0) return null
+      const percent = (entry.value - nav) / nav * 100
+      return Number.isFinite(percent) ? percent : null
+    })
+}
+
 export function formatStructureValue(value: number | null): string {
   return value === null ? '缺失' : String(value)
 }

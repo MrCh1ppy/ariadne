@@ -8,7 +8,7 @@ vi.mock('echarts', () => ({ init: () => ({ setOption, dispose: vi.fn() }) }))
 import StructurePreview from './StructurePreview.vue'
 
 describe('StructurePreview', () => {
-  it('hides point labels, shows absolute values plus MA-to-NAV percentages and missing markers', async () => {
+  it('renders five signed MA-to-NAV percentage bars without point labels', async () => {
     const structure = buildMaStructure({
       date: '2026-09-22', unitNav: '1.00', movingAverages: {
         MA120: { value: '1.10', deviationPercent: '-9.09' },
@@ -19,11 +19,19 @@ describe('StructurePreview', () => {
     })
     const wrapper = mount(StructurePreview, { props: { structure, pinned: false, narrow: false, reducedMotion: true, targetStyle: { width: '380px' } } })
     await flushPromises()
-    const option = setOption.mock.calls.at(-1)?.[0] as { series: { type: string; symbol: string; label: { show: boolean }; data: unknown[] }[] }
-    expect(option.series[0].type).toBe('line')
-    expect(option.series[0].symbol).toBe('circle')
+    const option = setOption.mock.calls.at(-1)?.[0] as { xAxis: { data: string[]; axisLine: { onZero: boolean } }; yAxis: { min: number; max: number; axisLabel: { formatter: (value: number) => string } }; series: { type: string; label: { show: boolean }; data: unknown[]; itemStyle: { color: (params: { value: number }) => string } }[] }
+    expect(option.xAxis.data).toEqual(['MA120', 'MA60', 'MA30', 'MA15', 'MA5'])
+    expect(option.xAxis.axisLine.onZero).toBe(true)
+    expect(option.yAxis.min).toBeCloseTo(-10)
+    expect(option.yAxis.max).toBeCloseTo(10)
+    expect(option.yAxis.axisLabel.formatter(1.5)).toBe('1.5%')
+    expect(option.series[0].type).toBe('bar')
     expect(option.series[0].label.show).toBe(false)
-    expect(option.series[0].data).toHaveLength(6)
+    expect(option.series[0].data).toHaveLength(5)
+    expect(option.series[0].data[0]).toBeCloseTo(10)
+    expect(option.series[0].data[1]).toBeCloseTo(-10)
+    expect(option.series[0].data.slice(2)).toEqual([null, null, 0])
+    expect(option.series[0].itemStyle.color({ value: 10 })).not.toBe(option.series[0].itemStyle.color({ value: -10 }))
     expect(wrapper.find('.structure-preview').attributes('style')).toContain('width: 380px')
     expect(wrapper.find('.structure-preview').attributes('style')).not.toContain('max-height')
     expect(wrapper.find('.preview-comparison caption').text()).toContain('（MA − NAV）/ NAV × 100%')
@@ -38,9 +46,11 @@ describe('StructurePreview', () => {
     expect(wrapper.find('.visually-hidden').text()).toContain('单位净值1')
     expect(wrapper.find('.visually-hidden').text()).toContain('MA30缺失')
     expect(wrapper.find('.preview-chart').attributes('aria-hidden')).toBe('true')
+    expect(wrapper.find('.preview-chart-note').text()).toContain('不是收益率')
     await wrapper.setProps({ structure: buildMaStructure({ date: '2026-09-23', unitNav: null, movingAverages: {
       MA120: { value: '1.10', deviationPercent: null },
     } }) })
+    expect(setOption.mock.calls.at(-1)?.[0].series[0].data).toEqual([null, null, null, null, null])
     expect(wrapper.findAll('.preview-comparison tbody tr').at(0)?.findAll('td').map((td) => td.text()))
       .toEqual(['1.1', '缺失', '缺失', '缺失', '缺失', '缺失'])
     expect(wrapper.findAll('.preview-comparison tbody tr').at(1)?.findAll('td').map((td) => td.text()))
@@ -48,12 +58,30 @@ describe('StructurePreview', () => {
     await wrapper.setProps({ structure: buildMaStructure({ date: '2026-09-24', unitNav: '0', movingAverages: {
       MA120: { value: '1.10', deviationPercent: null },
     } }) })
+    expect(setOption.mock.calls.at(-1)?.[0].series[0].data).toEqual([null, null, null, null, null])
     expect(wrapper.findAll('.preview-comparison tbody tr').at(0)?.findAll('td').at(5)?.text()).toBe('0')
     expect(wrapper.findAll('.preview-comparison tbody tr').at(1)?.findAll('td').at(0)?.text()).toBe('—')
     expect(wrapper.findAll('.preview-comparison tbody tr').at(1)?.findAll('td').at(5)?.text()).toBe('基准')
     await wrapper.setProps({ narrow: true })
     expect(wrapper.find('.structure-preview').classes()).toContain('narrow')
     expect(wrapper.find('.preview-comparison').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('keeps the 0% baseline for positive-only, negative-only and all-zero bars', async () => {
+    const structure = (ma: string) => buildMaStructure({ date: '2026-09-25', unitNav: '1', movingAverages: {
+      MA120: { value: ma, deviationPercent: null },
+    } })
+    const wrapper = mount(StructurePreview, { props: { structure: structure('1.1'), pinned: false, narrow: false, reducedMotion: true } })
+    await flushPromises()
+    expect(setOption.mock.calls.at(-1)?.[0].yAxis.min).toBe(0)
+    expect(setOption.mock.calls.at(-1)?.[0].yAxis.max).toBeCloseTo(10)
+    await wrapper.setProps({ structure: structure('0.9') })
+    expect(setOption.mock.calls.at(-1)?.[0].yAxis.min).toBeCloseTo(-10)
+    expect(setOption.mock.calls.at(-1)?.[0].yAxis.max).toBe(0)
+    await wrapper.setProps({ structure: structure('1') })
+    expect(setOption.mock.calls.at(-1)?.[0].series[0].data).toEqual([0, null, null, null, null])
+    expect(setOption.mock.calls.at(-1)?.[0].yAxis).toMatchObject({ min: -1, max: 1 })
     wrapper.unmount()
   })
 

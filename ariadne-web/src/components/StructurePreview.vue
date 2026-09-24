@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import type { MaStructure } from '../lib/maStructure'
-import { STRUCTURE_COLORS, STRUCTURE_SERIES, formatRelativeNavPercent, formatStructureValue, valuesOf } from '../lib/maStructure'
+import { MA_KEYS, formatRelativeNavPercent, formatStructureValue, relativeNavValuesOf } from '../lib/maStructure'
 
 const props = defineProps<{
   structure: MaStructure
@@ -24,6 +24,9 @@ let chart: echarts.ECharts | undefined
 function render(): void {
   if (!chart) return
   const dark = props.narrow
+  const values = relativeNavValuesOf(props.structure)
+  const numericValues = values.filter((value): value is number => value !== null)
+  const allZero = numericValues.every((value) => value === 0)
   chart.setOption({
     animation: !props.reducedMotion,
     animationDuration: 200,
@@ -31,8 +34,8 @@ function render(): void {
     grid: { left: 6, right: 10, top: 8, bottom: 18, containLabel: true },
     xAxis: {
       type: 'category',
-      data: [...STRUCTURE_SERIES],
-      axisLine: { lineStyle: { color: dark ? 'rgba(232,241,247,0.4)' : '#cfdae4' } },
+      data: [...MA_KEYS],
+      axisLine: { onZero: true, lineStyle: { color: dark ? 'rgba(232,241,247,0.4)' : '#cfdae4' } },
       axisTick: { show: false },
       axisLabel: {
         color: dark ? '#c3d4e2' : '#718096',
@@ -44,29 +47,20 @@ function render(): void {
     yAxis: {
       type: 'value',
       scale: true,
-      axisLabel: { show: false },
+      min: allZero ? -1 : Math.min(0, ...numericValues),
+      max: allZero ? 1 : Math.max(0, ...numericValues),
+      axisLabel: { color: dark ? '#c3d4e2' : '#718096', formatter: (value: number) => `${Number(value.toFixed(2))}%` },
       splitLine: { lineStyle: { color: dark ? 'rgba(232,241,247,0.12)' : '#e9eef3' } },
     },
     series: [{
-      type: 'line',
-      data: valuesOf(props.structure),
-      symbol: 'circle',
-      symbolSize: 6.5,
-      connectNulls: false,
-      lineStyle: { color: dark ? '#9ec8e2' : '#1b5f9e', width: 1.8 },
-      itemStyle: { color: (params: { dataIndex: number }) => STRUCTURE_COLORS[STRUCTURE_SERIES[params.dataIndex] ?? '单位净值'] },
+      type: 'bar',
+      data: values,
+      barWidth: '45%',
+      itemStyle: { color: (params: { value: number | null }) => params.value !== null && params.value >= 0 ? '#c8434b' : '#0a7f7a' },
       label: {
         show: false,
-        position: 'top',
-        distance: 5,
-        fontSize: 10,
-        color: dark ? '#e8f1f7' : '#38506b',
-        formatter: (params: { value: unknown }) => {
-          const value = Array.isArray(params.value) ? params.value[1] : params.value
-          return formatStructureValue(typeof value === 'number' ? value : null)
-        },
       },
-      z: 3,
+      z: 2,
     }],
   }, true)
 }
@@ -126,6 +120,7 @@ const comparisons = computed(() => {
       </span>
     </div>
     <div ref="chartEl" class="preview-chart" aria-hidden="true" />
+    <div class="preview-chart-note"><span class="above-nav">正值：均线高于净值</span>；<span class="below-nav">负值：均线低于净值</span>（不是收益率）</div>
     <table class="preview-comparison">
       <caption>均线相对净值（MA − NAV）/ NAV × 100%</caption>
       <thead><tr><th scope="col">相对净值</th><th v-for="item in columns" :key="item.name" scope="col">{{ item.name }}</th></tr></thead>
@@ -191,6 +186,9 @@ const comparisons = computed(() => {
   color: #fff;
 }
 .preview-chart { width: 100%; height: 155px; }
+.preview-chart-note { margin-top: -3px; font-size: 9px; color: #718096; text-align: center; }
+.preview-chart-note .above-nav { color: #c8434b; }
+.preview-chart-note .below-nav { color: #0a7f7a; }
 .preview-comparison { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; color: #38506b; text-align: center; font-variant-numeric: tabular-nums; }
 .preview-comparison caption { caption-side: top; text-align: left; font-size: 10px; }
 .preview-comparison th, .preview-comparison td { padding: 2px 1px; white-space: nowrap; }
@@ -212,6 +210,8 @@ const comparisons = computed(() => {
 }
 .structure-preview.narrow .preview-title { color: #e8f1f7; }
 .structure-preview.narrow .preview-chart { height: 180px; }
+.structure-preview.narrow .preview-chart-note { color: #c3d4e2; }
+.structure-preview.narrow .preview-chart-note .below-nav { color: #79d4cc; }
 .structure-preview.narrow .preview-comparison { color: #e8f1f7; }
 .structure-preview.narrow .preview-pin {
   border-color: rgba(232, 241, 247, 0.5);
