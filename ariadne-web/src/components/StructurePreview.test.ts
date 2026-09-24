@@ -35,7 +35,8 @@ describe('StructurePreview', () => {
     expect(option.series[0].itemStyle.color({ value: -10 })).toBe('#0a7f7a')
     expect(wrapper.find('.structure-preview').attributes('style')).toContain('width: 380px')
     expect(wrapper.find('.structure-preview').attributes('style')).not.toContain('max-height')
-    expect(wrapper.find('.preview-comparison caption').text()).toContain('（NAV − MA）/ MA × 100%')
+    expect(wrapper.find('.preview-comparison').attributes('aria-label')).toBe('净值相对均线')
+    expect(wrapper.find('.preview-comparison caption').exists()).toBe(false)
     expect(wrapper.findAll('.preview-comparison thead th').map((th) => th.text()))
       .toEqual(['相对均线', 'MA120', 'MA60', 'MA30', 'MA15', 'MA5', '单位净值'])
     expect(wrapper.findAll('.preview-comparison tbody tr').map((tr) => tr.findAll('th').map((th) => th.text())))
@@ -47,9 +48,7 @@ describe('StructurePreview', () => {
     expect(wrapper.find('.visually-hidden').text()).toContain('单位净值1')
     expect(wrapper.find('.visually-hidden').text()).toContain('MA30缺失')
     expect(wrapper.find('.preview-chart').attributes('aria-hidden')).toBe('true')
-    expect(wrapper.find('.preview-chart-note').text()).toContain('不是收益率')
-    expect(wrapper.find('.preview-chart-note').text()).toContain('正值：净值高于均线')
-    expect(wrapper.find('.preview-chart-note').text()).toContain('负值：净值低于均线')
+    expect(wrapper.find('.preview-chart-note').exists()).toBe(false)
     await wrapper.setProps({ structure: buildMaStructure({ date: '2026-09-23', unitNav: null, movingAverages: {
       MA120: { value: '1.10', deviationPercent: null },
     } }) })

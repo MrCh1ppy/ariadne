@@ -120,9 +120,7 @@ const comparisons = computed(() => {
       </span>
     </div>
     <div ref="chartEl" class="preview-chart" aria-hidden="true" />
-    <div class="preview-chart-note"><span class="positive-nav">正值：净值高于均线</span>；<span class="negative-nav">负值：净值低于均线</span>（不是收益率）</div>
-    <table class="preview-comparison">
-      <caption>净值相对均线（NAV − MA）/ MA × 100%</caption>
+    <table class="preview-comparison" aria-label="净值相对均线">
       <thead><tr><th scope="col">相对均线</th><th v-for="item in columns" :key="item.name" scope="col">{{ item.name }}</th></tr></thead>
       <tbody>
         <tr class="preview-absolute"><th scope="row">绝对值</th><td v-for="item in columns" :key="item.name">{{ formatStructureValue(item.value) }}</td></tr>
@@ -186,11 +184,7 @@ const comparisons = computed(() => {
   color: #fff;
 }
 .preview-chart { width: 100%; height: 155px; }
-.preview-chart-note { margin-top: -3px; font-size: 9px; color: #718096; text-align: center; }
-.preview-chart-note .positive-nav { color: #c8434b; }
-.preview-chart-note .negative-nav { color: #0a7f7a; }
 .preview-comparison { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; color: #38506b; text-align: center; font-variant-numeric: tabular-nums; }
-.preview-comparison caption { caption-side: top; text-align: left; font-size: 10px; }
 .preview-comparison th, .preview-comparison td { padding: 2px 1px; white-space: nowrap; }
 .preview-comparison th { font-weight: 600; }
 .preview-comparison .preview-absolute td,
@@ -210,8 +204,6 @@ const comparisons = computed(() => {
 }
 .structure-preview.narrow .preview-title { color: #e8f1f7; }
 .structure-preview.narrow .preview-chart { height: 180px; }
-.structure-preview.narrow .preview-chart-note { color: #c3d4e2; }
-.structure-preview.narrow .preview-chart-note .negative-nav { color: #79d4cc; }
 .structure-preview.narrow .preview-comparison { color: #e8f1f7; }
 .structure-preview.narrow .preview-pin {
   border-color: rgba(232, 241, 247, 0.5);
