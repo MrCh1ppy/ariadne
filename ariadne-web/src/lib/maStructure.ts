@@ -40,26 +40,28 @@ export function valuesOf(structure: MaStructure): (number | null)[] {
   return structure.entries.map((entry) => entry.value)
 }
 
-export function relativeNavValuesOf(structure: MaStructure): (number | null)[] {
+/** NAV deviation from each MA; only used by the structure preview. */
+export function navDeviationValuesOf(structure: MaStructure): (number | null)[] {
   const nav = structure.entries.find((entry) => entry.name === '单位净值')?.value ?? null
   return structure.entries
     .filter((entry) => entry.name !== '单位净值')
-    .map((entry) => {
-      if (entry.value === null || nav === null || nav === 0) return null
-      const percent = (entry.value - nav) / nav * 100
-      return Number.isFinite(percent) ? percent : null
-    })
+    .map((entry) => navDeviationPercent(nav, entry.value))
 }
 
 export function formatStructureValue(value: number | null): string {
   return value === null ? '缺失' : String(value)
 }
 
-/** MA relative to NAV, not the API's NAV-relative-to-MA deviationPercent. */
-export function formatRelativeNavPercent(ma: number | null, nav: number | null): string {
-  if (ma === null || nav === null || nav === 0) return '—'
-  const percent = (ma - nav) / nav * 100
-  if (!Number.isFinite(percent)) return '—'
+/** NAV relative to MA; computed locally for the structure preview. */
+export function navDeviationPercent(nav: number | null, ma: number | null): number | null {
+  if (ma === null || nav === null || ma === 0) return null
+  const percent = (nav - ma) / ma * 100
+  return Number.isFinite(percent) ? percent : null
+}
+
+export function formatNavDeviationPercent(nav: number | null, ma: number | null): string {
+  const percent = navDeviationPercent(nav, ma)
+  if (percent === null) return '—'
   const rounded = percent.toFixed(2)
   if (rounded === '-0.00') return '0.00%'
   return `${percent > 0 && rounded !== '0.00' ? '+' : ''}${rounded}%`

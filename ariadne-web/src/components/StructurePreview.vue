@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import type { MaStructure } from '../lib/maStructure'
-import { MA_KEYS, formatRelativeNavPercent, formatStructureValue, relativeNavValuesOf } from '../lib/maStructure'
+import { MA_KEYS, formatNavDeviationPercent, formatStructureValue, navDeviationValuesOf } from '../lib/maStructure'
 
 const props = defineProps<{
   structure: MaStructure
@@ -24,7 +24,7 @@ let chart: echarts.ECharts | undefined
 function render(): void {
   if (!chart) return
   const dark = props.narrow
-  const values = relativeNavValuesOf(props.structure)
+  const values = navDeviationValuesOf(props.structure)
   const numericValues = values.filter((value): value is number => value !== null)
   const allZero = numericValues.every((value) => value === 0)
   chart.setOption({
@@ -85,7 +85,7 @@ const comparisons = computed(() => {
     name: entry.name,
     text: entry.name === '单位净值'
       ? (entry.value === null ? '—' : '基准')
-      : formatRelativeNavPercent(entry.value, nav),
+      : formatNavDeviationPercent(nav, entry.value),
   }))
 })
 </script>
@@ -120,10 +120,10 @@ const comparisons = computed(() => {
       </span>
     </div>
     <div ref="chartEl" class="preview-chart" aria-hidden="true" />
-    <div class="preview-chart-note"><span class="above-nav">正值：均线高于净值</span>；<span class="below-nav">负值：均线低于净值</span>（不是收益率）</div>
+    <div class="preview-chart-note"><span class="positive-nav">正值：净值高于均线</span>；<span class="negative-nav">负值：净值低于均线</span>（不是收益率）</div>
     <table class="preview-comparison">
-      <caption>均线相对净值（MA − NAV）/ NAV × 100%</caption>
-      <thead><tr><th scope="col">相对净值</th><th v-for="item in columns" :key="item.name" scope="col">{{ item.name }}</th></tr></thead>
+      <caption>净值相对均线（NAV − MA）/ MA × 100%</caption>
+      <thead><tr><th scope="col">相对均线</th><th v-for="item in columns" :key="item.name" scope="col">{{ item.name }}</th></tr></thead>
       <tbody>
         <tr class="preview-absolute"><th scope="row">绝对值</th><td v-for="item in columns" :key="item.name">{{ formatStructureValue(item.value) }}</td></tr>
         <tr class="preview-percent"><th scope="row">百分比</th><td v-for="item in comparisons" :key="item.name">{{ item.text }}</td></tr>
@@ -187,8 +187,8 @@ const comparisons = computed(() => {
 }
 .preview-chart { width: 100%; height: 155px; }
 .preview-chart-note { margin-top: -3px; font-size: 9px; color: #718096; text-align: center; }
-.preview-chart-note .above-nav { color: #c8434b; }
-.preview-chart-note .below-nav { color: #0a7f7a; }
+.preview-chart-note .positive-nav { color: #c8434b; }
+.preview-chart-note .negative-nav { color: #0a7f7a; }
 .preview-comparison { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; color: #38506b; text-align: center; font-variant-numeric: tabular-nums; }
 .preview-comparison caption { caption-side: top; text-align: left; font-size: 10px; }
 .preview-comparison th, .preview-comparison td { padding: 2px 1px; white-space: nowrap; }
@@ -211,7 +211,7 @@ const comparisons = computed(() => {
 .structure-preview.narrow .preview-title { color: #e8f1f7; }
 .structure-preview.narrow .preview-chart { height: 180px; }
 .structure-preview.narrow .preview-chart-note { color: #c3d4e2; }
-.structure-preview.narrow .preview-chart-note .below-nav { color: #79d4cc; }
+.structure-preview.narrow .preview-chart-note .negative-nav { color: #79d4cc; }
 .structure-preview.narrow .preview-comparison { color: #e8f1f7; }
 .structure-preview.narrow .preview-pin {
   border-color: rgba(232, 241, 247, 0.5);

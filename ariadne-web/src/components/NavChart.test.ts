@@ -121,8 +121,8 @@ describe('NAV chart structure preview & comparison', () => {
     expect(wrapper.find('.structure-preview').exists()).toBe(true)
     expect(wrapper.find('.preview-title').text()).toContain('2026-09-01')
     expect(wrapper.findComponent({ name: 'StructurePreview' }).props('targetStyle')).not.toHaveProperty('maxHeight')
-    expect(wrapper.find('.preview-comparison').text()).toContain('相对净值')
-    expect(wrapper.find('.preview-comparison tbody').text()).toContain('-20.00%')
+    expect(wrapper.find('.preview-comparison').text()).toContain('相对均线')
+    expect(wrapper.find('.preview-comparison tbody').text()).toContain('+25.00%')
 
     fireZr('globalout')
     vi.advanceTimersByTime(619)

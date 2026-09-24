@@ -3,12 +3,12 @@ import type { AnalysisPoint } from '../types'
 import {
   MAX_PINNED_DATES,
   buildMaStructure,
-  formatRelativeNavPercent,
+  formatNavDeviationPercent,
   formatStructureValue,
   hasAnyValue,
   locateCategoryIndex,
   reconcilePinned,
-  relativeNavValuesOf,
+  navDeviationValuesOf,
   valuesOf,
 } from './maStructure'
 
@@ -52,37 +52,39 @@ describe('maStructure builder', () => {
     expect(formatStructureValue(0.98)).toBe('0.98')
   })
 
-  it('calculates MA relative to NAV rather than using API deviationPercent', () => {
+  it('calculates NAV relative to MA rather than using API deviationPercent', () => {
     const structure = buildMaStructure(point('2026-09-22', '1.00', {
       MA120: { value: '1.10', deviationPercent: '999.00' },
       MA60: { value: '0.90', deviationPercent: '-999.00' },
       MA30: { value: '1.00', deviationPercent: null },
     }))
     const nav = structure.entries[5]!.value
-    expect(structure.entries.slice(0, 5).map((entry) => formatRelativeNavPercent(entry.value, nav)))
-      .toEqual(['+10.00%', '-10.00%', '0.00%', '—', '—'])
-    expect(formatRelativeNavPercent(1, null)).toBe('—')
-    expect(formatRelativeNavPercent(null, 1)).toBe('—')
-    expect(formatRelativeNavPercent(1, 0)).toBe('—')
-    expect(formatRelativeNavPercent(0.999999, 1)).toBe('0.00%')
+    expect(structure.entries.slice(0, 5).map((entry) => formatNavDeviationPercent(nav, entry.value)))
+      .toEqual(['-9.09%', '+11.11%', '0.00%', '—', '—'])
+    expect(formatNavDeviationPercent(1, null)).toBe('—')
+    expect(formatNavDeviationPercent(null, 1)).toBe('—')
+    expect(formatNavDeviationPercent(1, 0)).toBe('—')
+    expect(formatNavDeviationPercent(0, 1)).toBe('-100.00%')
+    expect(formatNavDeviationPercent(0.999999, 1)).toBe('0.00%')
   })
 
-  it('builds five MA percentage bars and keeps missing or zero-NAV values null', () => {
-    const values = relativeNavValuesOf(buildMaStructure(point('2026-09-22', '1.00', {
+  it('builds five NAV-to-MA percentage bars and keeps missing or zero-MA values null', () => {
+    const values = navDeviationValuesOf(buildMaStructure(point('2026-09-22', '1.00', {
       MA120: { value: '1.10', deviationPercent: '999.00' },
       MA60: { value: '0.90', deviationPercent: '-999.00' },
       MA30: { value: '1.00', deviationPercent: null },
       MA15: { value: null, deviationPercent: null },
       MA5: { value: '1.05', deviationPercent: null },
     })))
-    expect(values[0]).toBeCloseTo(10)
-    expect(values[1]).toBeCloseTo(-10)
+    expect(values[0]).toBeCloseTo(-9.090909)
+    expect(values[1]).toBeCloseTo(11.111111)
     expect(values[2]).toBe(0)
     expect(values[3]).toBeNull()
-    expect(values[4]).toBeCloseTo(5)
-    expect(relativeNavValuesOf(buildMaStructure(point('2026-09-22', '0', {
+    expect(values[4]).toBeCloseTo(-4.761905)
+    expect(navDeviationValuesOf(buildMaStructure(point('2026-09-22', '0', {
       MA120: { value: '1.10', deviationPercent: null },
-    })))).toEqual([null, null, null, null, null])
+      MA60: { value: '0', deviationPercent: null },
+    })))).toEqual([-100, null, null, null, null])
   })
 })
 
