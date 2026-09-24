@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import type { FundAnalysis } from '../types'
-import { formatNavTooltip } from '../lib/formatNavTooltip'
+import { formatNavTooltip, maColors } from '../lib/formatNavTooltip'
 
 const props = defineProps<{ analysis: FundAnalysis }>()
 const chartEl = ref<HTMLDivElement>()
@@ -18,7 +18,7 @@ let widthListener: ((event: MediaQueryListEvent) => void) | undefined
 
 const legendLayout = computed(() =>
   isNarrow.value
-    ? { top: 4, left: 0, orient: 'horizontal' as const, itemGap: 8 }
+    ? { top: 4, left: 0, right: 0, type: 'scroll' as const, orient: 'horizontal' as const, itemGap: 8 }
     : { top: 4, right: 4, itemGap: 24 },
 )
 
@@ -29,7 +29,7 @@ function render(): void {
   chart.setOption({
     animation: !prefersReducedMotion.value,
     animationDuration: 450,
-    color: ['#1b5f9e', '#0a9f98', '#7a6fd0', '#d08a3e'],
+    color: ['#1b5f9e', ...maColors.map(([, color]) => color)],
     grid: { left: 12, right: 20, top: 56, bottom: 32, containLabel: true },
     legend: {
       ...legendLayout.value,
@@ -38,6 +38,7 @@ function render(): void {
       itemWidth: isNarrow.value ? 14 : 18,
       itemHeight: 4,
       icon: 'roundRect',
+      pageTextStyle: { color: '#5c6d81' },
     },
     tooltip: {
       trigger: 'axis',
@@ -105,6 +106,28 @@ function render(): void {
         z: 2,
       },
       {
+        name: 'MA5',
+        type: 'line',
+        data: points.map((point) => point.movingAverages.MA5?.value == null ? null : Number(point.movingAverages.MA5.value)),
+        showSymbol: false,
+        smooth: false,
+        connectNulls: false,
+        lineStyle: { width: 1.5 },
+        emphasis: { lineStyle: { width: 3 } },
+        z: 4,
+      },
+      {
+        name: 'MA15',
+        type: 'line',
+        data: points.map((point) => point.movingAverages.MA15?.value == null ? null : Number(point.movingAverages.MA15.value)),
+        showSymbol: false,
+        smooth: false,
+        connectNulls: false,
+        lineStyle: { width: 2, type: 'dashed' },
+        emphasis: { lineStyle: { width: 3 } },
+        z: 3,
+      },
+      {
         name: 'MA30',
         type: 'line',
         data: points.map((point) => point.movingAverages.MA30?.value == null ? null : Number(point.movingAverages.MA30.value)),
@@ -170,5 +193,5 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="chartEl" class="chart" role="img" aria-label="单位净值与MA30、MA60、MA120走势图" />
+  <div ref="chartEl" class="chart" role="img" aria-label="单位净值与MA5、MA15、MA30、MA60、MA120走势图" />
 </template>

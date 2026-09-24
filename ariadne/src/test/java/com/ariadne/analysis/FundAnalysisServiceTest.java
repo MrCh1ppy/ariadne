@@ -184,6 +184,40 @@ class FundAnalysisServiceTest {
     }
 
     @Test
+    void shortPeriodsUseOnlyTheirOwnTradingDayWindows() {
+        for (var period : List.of(MaPeriod.MA5, MaPeriod.MA15)) {
+            var source = mock(FundSource.class);
+            var funds = mock(FundService.class);
+            var dates = days(period.window() + 1);
+            when(source.getTradeDates(MINIMUM, dates.getLast())).thenReturn(calendar(dates));
+            when(funds.getHistory(any(), any(), any())).thenReturn(navs(dates));
+
+            var result = service(funds, source).analyze("022485", dates.get(period.window() - 1).toString(),
+                    dates.getLast().toString(), Set.of(period));
+
+            assertEquals(Set.of(period), result.points().getFirst().movingAverages().keySet());
+            assertEquals(period == MaPeriod.MA5 ? "3.0000000000" : "8.0000000000",
+                    result.points().getFirst().movingAverages().get(period).value());
+            assertEquals(period == MaPeriod.MA5 ? "66.67" : "87.50",
+                    result.points().getFirst().movingAverages().get(period).deviationPercent());
+            verify(funds).getHistory("022485", MINIMUM.toString(), dates.getLast().toString());
+
+            assertThrows(BadRequestException.class, () -> service(funds, source).analyze("022485",
+                    dates.get(period.window() - 2).toString(), dates.getLast().toString(), Set.of(period)));
+            var incomplete = navs(dates);
+            incomplete.removeFirst();
+            when(funds.getHistory(any(), any(), any())).thenReturn(incomplete);
+            var missing = service(funds, source).analyze("022485", dates.get(period.window() - 1).toString(),
+                    dates.getLast().toString(), Set.of(period));
+            assertEquals(null, missing.points().getFirst().movingAverages().get(period).value());
+            assertEquals(null, missing.points().getFirst().movingAverages().get(period).deviationPercent());
+            assertEquals(period.name() + " unavailable for 1 point(s)", missing.warnings().getFirst());
+            assertEquals(period == MaPeriod.MA5 ? "4.0000000000" : "9.0000000000",
+                    missing.points().getLast().movingAverages().get(period).value());
+        }
+    }
+
+    @Test
     void supportsOneHundredTwentyTradingDayWindow() {
         var source = mock(FundSource.class);
         var funds = mock(FundService.class);
@@ -194,7 +228,10 @@ class FundAnalysisServiceTest {
         var result = service(funds, source).analyze("022485", dates.get(119).toString(), dates.getLast().toString());
 
         assertEquals(1, result.points().size());
-        assertEquals(Set.of(MaPeriod.MA30, MaPeriod.MA60, MaPeriod.MA120), result.points().get(0).movingAverages().keySet());
+        assertEquals(Set.of(MaPeriod.MA5, MaPeriod.MA15, MaPeriod.MA30, MaPeriod.MA60, MaPeriod.MA120),
+                result.points().get(0).movingAverages().keySet());
+        assertEquals("118.0000000000", result.points().get(0).movingAverages().get(MaPeriod.MA5).value());
+        assertEquals("113.0000000000", result.points().get(0).movingAverages().get(MaPeriod.MA15).value());
         assertEquals("60.5000000000", result.points().get(0).movingAverages().get(MaPeriod.MA120).value());
         assertEquals("98.35", result.points().get(0).movingAverages().get(MaPeriod.MA120).deviationPercent());
         verify(funds).getHistory("022485", MINIMUM.toString(), dates.getLast().toString());

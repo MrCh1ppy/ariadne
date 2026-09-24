@@ -6,7 +6,7 @@ export interface FundOption {
 export interface AnalysisPoint {
   date: string
   unitNav: string | null
-  movingAverages: Partial<Record<'MA30' | 'MA60' | 'MA120', {
+  movingAverages: Partial<Record<'MA5' | 'MA15' | 'MA30' | 'MA60' | 'MA120', {
     value: string | null
     deviationPercent: string | null
   }>>
