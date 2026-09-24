@@ -15,7 +15,7 @@ The Vite development server proxies `/api/*` to `http://127.0.0.1:18080` and rem
 VITE_JAVA_URL=http://127.0.0.1:18080 npm run dev
 ```
 
-The browser calls `/api/funds/search?prefix=022` and `/api/funds/{fundCode}/analysis`; search matches fund codes starting with the supplied prefix and returns at most 20 ordered results. If a short prefix returns too many results, continue typing (for example, `022485`) to narrow the list. Vite rewrites these to the Java service routes. `VITE_API_BASE` can change the browser base path for a separately hosted proxy.
+The browser calls `/api/funds/search?prefix=022` and `/api/funds/{fundCode}/analysis`; search matches fund codes starting with the supplied prefix and returns at most 20 ordered results. If a short prefix returns too many results, continue typing (for example, `022485`) to narrow the list. Vite rewrites these to the Java service routes. `VITE_API_BASE` can change the browser base path for a separately hosted proxy. Analysis points use `movingAverages.MA30/MA60/MA120` (`value` and `deviationPercent`), with no legacy flat MA fields. The default request includes all three averages and requires 120 trading days of calendar history; early ranges can return 400. Missing NAV or MA values remain blank, and the comparison percentages are not investment returns.
 
 ## Remote user-unit deployment
 

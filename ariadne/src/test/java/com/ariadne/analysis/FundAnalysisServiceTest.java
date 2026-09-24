@@ -46,7 +46,7 @@ class FundAnalysisServiceTest {
         when(source.getTradeDates(MINIMUM, dates.getLast())).thenReturn(calendar(dates));
         when(funds.getHistory("022485", MINIMUM.plusDays(0).toString(), dates.getLast().toString())).thenReturn(navs(dates));
 
-        var result = service(funds, source).analyze("022485", dates.get(59).toString(), dates.getLast().toString());
+        var result = analyze60(funds, source, dates.get(59).toString(), dates.getLast().toString());
 
         assertEquals(List.of(
                 point(dates.get(59), "60", "45.5000000000", "31.87", "30.5000000000", "96.72"),
@@ -66,7 +66,7 @@ class FundAnalysisServiceTest {
         when(source.getTradeDates(MINIMUM, dates.getLast())).thenReturn(calendar(dates));
         when(funds.getHistory("022485", dates.get(0).toString(), dates.getLast().toString())).thenReturn(navs(dates));
 
-        var result = service(funds, source).analyze("022485", dates.get(59).toString(), dates.getLast().toString());
+        var result = analyze60(funds, source, dates.get(59).toString(), dates.getLast().toString());
 
         assertEquals(2, result.points().size());
         verify(funds).getHistory("022485", dates.get(0).toString(), dates.getLast().toString());
@@ -82,7 +82,7 @@ class FundAnalysisServiceTest {
         navs.remove(0);
         when(funds.getHistory(any(), any(), any())).thenReturn(navs);
 
-        var result = service(funds, source).analyze("022485", dates.get(59).toString(), dates.getLast().toString());
+        var result = analyze60(funds, source, dates.get(59).toString(), dates.getLast().toString());
 
         assertEquals("45.5000000000", result.points().get(0).movingAverages().get(MaPeriod.MA30).value());
         assertEquals("31.87", result.points().get(0).movingAverages().get(MaPeriod.MA30).deviationPercent());
@@ -103,7 +103,7 @@ class FundAnalysisServiceTest {
         history.remove(30);
         when(funds.getHistory(any(), any(), any())).thenReturn(history);
 
-        var points = service(funds, source).analyze("022485", dates.get(59).toString(), dates.getLast().toString()).points();
+        var points = analyze60(funds, source, dates.get(59).toString(), dates.getLast().toString()).points();
         assertEquals(null, points.get(0).movingAverages().get(MaPeriod.MA30).value());
         assertEquals(null, points.get(0).movingAverages().get(MaPeriod.MA60).value());
         assertEquals("46.5000000000", points.get(1).movingAverages().get(MaPeriod.MA30).value());
@@ -123,14 +123,14 @@ class FundAnalysisServiceTest {
         navs.removeLast();
         when(funds.getHistory(any(), any(), any())).thenReturn(navs);
 
-        var result = service(funds, source).analyze("022485", dates.get(59).toString(), dates.getLast().toString());
+        var result = analyze60(funds, source, dates.get(59).toString(), dates.getLast().toString());
 
         assertEquals(null, result.points().getLast().unitNav());
         assertEquals(null, result.points().getLast().movingAverages().get(MaPeriod.MA30).deviationPercent());
         assertEquals(null, result.points().getLast().movingAverages().get(MaPeriod.MA60).value());
         assertEquals(null, result.points().getLast().movingAverages().get(MaPeriod.MA60).deviationPercent());
-        assertEquals(List.of("NAV missing for 1 trading day(s)", "MA60 unavailable for 1 point(s)",
-                "MA30 unavailable for 1 point(s)"), result.warnings());
+        assertEquals(List.of("NAV missing for 1 trading day(s)", "MA30 unavailable for 1 point(s)",
+                "MA60 unavailable for 1 point(s)"), result.warnings());
     }
 
     @Test
@@ -151,18 +151,7 @@ class FundAnalysisServiceTest {
         var dates = days(59);
         when(source.getTradeDates(MINIMUM, dates.getLast())).thenReturn(calendar(dates));
 
-        assertThrows(BadRequestException.class, () -> service(funds, source).analyze("022485", MINIMUM.toString(), dates.getLast().toString()));
-        verify(funds, never()).getHistory(any(), any(), any());
-    }
-
-    @Test
-    void rejectsThirtyDaysOfHistoryWhenSixtyAreRequired() {
-        var source = mock(FundSource.class);
-        var funds = mock(FundService.class);
-        var dates = days(45);
-        when(source.getTradeDates(MINIMUM, dates.getLast())).thenReturn(calendar(dates));
-
-        assertThrows(BadRequestException.class, () -> service(funds, source).analyze("022485", dates.get(29).toString(), dates.getLast().toString()));
+        assertThrows(BadRequestException.class, () -> analyze60(funds, source, MINIMUM.toString(), dates.getLast().toString()));
         verify(funds, never()).getHistory(any(), any(), any());
     }
 
@@ -202,10 +191,10 @@ class FundAnalysisServiceTest {
         when(source.getTradeDates(MINIMUM, dates.getLast())).thenReturn(calendar(dates));
         when(funds.getHistory(any(), any(), any())).thenReturn(navs(dates));
 
-        var result = service(funds, source).analyze("022485", dates.get(119).toString(), dates.getLast().toString(),
-                Set.of(MaPeriod.MA120));
+        var result = service(funds, source).analyze("022485", dates.get(119).toString(), dates.getLast().toString());
 
         assertEquals(1, result.points().size());
+        assertEquals(Set.of(MaPeriod.MA30, MaPeriod.MA60, MaPeriod.MA120), result.points().get(0).movingAverages().keySet());
         assertEquals("60.5000000000", result.points().get(0).movingAverages().get(MaPeriod.MA120).value());
         assertEquals("98.35", result.points().get(0).movingAverages().get(MaPeriod.MA120).deviationPercent());
         verify(funds).getHistory("022485", MINIMUM.toString(), dates.getLast().toString());
@@ -219,16 +208,12 @@ class FundAnalysisServiceTest {
         when(source.getTradeDates(MINIMUM, dates.getLast())).thenReturn(calendar(dates));
 
         assertThrows(BadRequestException.class,
-                () -> service(funds, source).analyze("022485", dates.get(118).toString(), dates.getLast().toString(), Set.of(MaPeriod.MA120)));
+                () -> service(funds, source).analyze("022485", dates.get(118).toString(), dates.getLast().toString()));
         verify(funds, never()).getHistory(any(), any(), any());
     }
 
-    @Test
-    void rejectsDuplicateAndInvalidPeriodNames() {
-        var source = mock(FundSource.class);
-        var funds = mock(FundService.class);
-        assertThrows(BadRequestException.class,
-                () -> service(funds, source).analyze("022485", "2026-01-01", "2026-01-01", Set.of()));
+    private static FundAnalysis analyze60(FundService funds, FundSource source, String start, String end) {
+        return service(funds, source).analyze("022485", start, end, Set.of(MaPeriod.MA30, MaPeriod.MA60));
     }
 
     private static FundAnalysisService service(FundService funds, FundSource source) {

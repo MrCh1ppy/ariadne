@@ -20,7 +20,7 @@ import com.ariadne.extraction.UpstreamException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
+import java.util.EnumMap;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -73,11 +73,15 @@ class FundControllerTest {
     }
 
     @Test
-    void exposesTheAnalysisRouteWithMovingAveragesAndRequestedPeriods() throws Exception {
+    void exposesTheAnalysisRouteWithOnlyMovingAverages() throws Exception {
         var analysis = org.mockito.Mockito.mock(FundAnalysisService.class);
+        var averages = new EnumMap<MaPeriod, MaValue>(MaPeriod.class);
+        averages.put(MaPeriod.MA30, new MaValue("1.4564866667", "0.01"));
+        averages.put(MaPeriod.MA60, new MaValue("1.4627900000", "-0.42"));
+        averages.put(MaPeriod.MA120, new MaValue(null, null));
         var point = new AnalysisPoint(LocalDate.of(2026, 9, 22), "1.4566000000",
-                java.util.Map.of(MaPeriod.MA30, new MaValue("1.4564866667", "0.01")));
-        when(analysis.analyze("022485", "2026-08-25", "2026-09-22", Set.of(MaPeriod.MA30)))
+                averages);
+        when(analysis.analyze("022485", "2026-08-25", "2026-09-22"))
                 .thenReturn(new FundAnalysis("022485", LocalDate.of(2026, 8, 25), LocalDate.of(2026, 9, 22),
                         List.of(point), List.of()));
         var mvc = MockMvcBuilders.standaloneSetup(new FundController(org.mockito.Mockito.mock(FundService.class),
@@ -85,15 +89,15 @@ class FundControllerTest {
 
         mvc.perform(get("/funds/022485/analysis")
                         .param("startDate", "2026-08-25")
-                        .param("endDate", "2026-09-22")
-                        .param("periods", "MA30"))
+                        .param("endDate", "2026-09-22"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.points[0].unitNav", is("1.4566000000")))
                 .andExpect(jsonPath("$.points[0].movingAverages.MA30.value", is("1.4564866667")))
                 .andExpect(jsonPath("$.points[0].movingAverages.MA30.deviationPercent", is("0.01")))
-                .andExpect(jsonPath("$.points[0].ma30", is("1.4564866667")))
-                .andExpect(jsonPath("$.points[0].navVsMa30Percent", is("0.01")));
-        org.mockito.Mockito.verify(analysis).analyze("022485", "2026-08-25", "2026-09-22", Set.of(MaPeriod.MA30));
+                .andExpect(jsonPath("$.points[0].movingAverages.MA120.value").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.points[0].ma30").doesNotExist())
+                .andExpect(jsonPath("$.points[0].navVsMa30Percent").doesNotExist());
+        org.mockito.Mockito.verify(analysis).analyze("022485", "2026-08-25", "2026-09-22");
     }
 
     @Test
@@ -108,5 +112,10 @@ class FundControllerTest {
                         .param("periods", "MA999"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", is("invalid MA period: MA999")));
+        mvc.perform(get("/funds/022485/analysis")
+                        .param("startDate", "2026-08-25")
+                        .param("endDate", "2026-09-22")
+                        .param("periods", "MA30,"))
+                .andExpect(status().isBadRequest());
     }
 }

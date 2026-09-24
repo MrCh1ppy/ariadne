@@ -15,9 +15,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class FundAnalysisService {
     private static final ZoneId SHANGHAI = ZoneId.of("Asia/Shanghai");
-    private static final Set<MaPeriod> DEFAULT_PERIODS = Set.of(MaPeriod.MA30, MaPeriod.MA60);
+    private static final Set<MaPeriod> DEFAULT_PERIODS = EnumSet.allOf(MaPeriod.class);
     private final FundService fundService;
     private final FundSource source;
     private final Clock clock;
@@ -55,8 +55,8 @@ public class FundAnalysisService {
     }
 
     public FundAnalysis analyze(String fundCode, String startDate, String endDate, Set<MaPeriod> requestedPeriods) {
-        var selected = new LinkedHashSet<MaPeriod>(requestedPeriods);
-        if (selected.isEmpty()) throw new BadRequestException("at least one MA period is required");
+        if (requestedPeriods.isEmpty()) throw new BadRequestException("at least one MA period is required");
+        var selected = EnumSet.copyOf(requestedPeriods);
         var maxWindow = selected.stream().mapToInt(MaPeriod::window).max().orElseThrow();
 
         var request = validate(fundCode, startDate, endDate);

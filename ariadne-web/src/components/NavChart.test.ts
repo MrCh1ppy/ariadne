@@ -8,13 +8,21 @@ vi.mock('echarts', () => ({ init: () => ({ setOption, resize: vi.fn(), dispose: 
 import NavChart from './NavChart.vue'
 
 describe('NAV chart', () => {
-  it('plots only NAV, MA30 and MA60, preserving gaps and confining the tooltip', async () => {
+  it('plots NAV and three averages, preserving gaps and confining the tooltip', async () => {
     vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
     const analysis: FundAnalysis = {
       fundCode: '022485', startDate: '2026-09-21', endDate: '2026-09-22', warnings: [],
       points: [
-        { date: '2026-09-21', unitNav: '1.0000', ma30: '0.9000000000', navVsMa30Percent: '11.11', ma60: null, navVsMa60Percent: null },
-        { date: '2026-09-22', unitNav: null, ma30: null, navVsMa30Percent: null, ma60: null, navVsMa60Percent: null },
+        { date: '2026-09-21', unitNav: '1.0000', movingAverages: {
+          MA30: { value: '0.9000000000', deviationPercent: '11.11' },
+          MA60: { value: null, deviationPercent: null },
+          MA120: { value: '0.8000000000', deviationPercent: '25.00' },
+        } },
+        { date: '2026-09-22', unitNav: null, movingAverages: {
+          MA30: { value: null, deviationPercent: null },
+          MA60: { value: null, deviationPercent: null },
+          MA120: { value: null, deviationPercent: null },
+        } },
       ],
     }
     const wrapper = mount(NavChart, { props: { analysis } })
@@ -23,8 +31,8 @@ describe('NAV chart', () => {
       tooltip: { confine: boolean; formatter: (items: { axisValue: string }[]) => string }
       series: { name: string; data: (number | null)[]; connectNulls: boolean; smooth: boolean }[]
     }
-    expect(option.series.map((series) => series.name)).toEqual(['单位净值', 'MA30', 'MA60'])
-    expect(option.series.map((series) => series.data)).toEqual([[1, null], [0.9, null], [null, null]])
+    expect(option.series.map((series) => series.name)).toEqual(['单位净值', 'MA30', 'MA60', 'MA120'])
+    expect(option.series.map((series) => series.data)).toEqual([[1, null], [0.9, null], [null, null], [0.8, null]])
     expect(option.series.every((series) => !series.connectNulls && !series.smooth)).toBe(true)
     expect(option.tooltip.confine).toBe(true)
     expect(option.tooltip.formatter([{ axisValue: '2026-09-22' }])).toContain('相对 MA60：<span style="color:#eef4f8">暂无</span>')

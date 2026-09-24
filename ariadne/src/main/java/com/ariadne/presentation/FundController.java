@@ -56,7 +56,7 @@ public class FundController {
     ) {
         if (periods == null) return analysisService.analyze(fundCode, startDate, endDate);
         var selected = EnumSet.noneOf(MaPeriod.class);
-        for (var name : periods.split(",")) {
+        for (var name : periods.split(",", -1)) {
             if (name.isBlank()) throw new BadRequestException("invalid periods parameter");
             try {
                 selected.add(MaPeriod.valueOf(name.trim()));

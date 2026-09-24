@@ -175,16 +175,7 @@ watch([startDate, endDate], () => { if (selected.value && !dateRangeInvalid.valu
       <div>
         <p class="eyebrow">ARIADNE · FUND INSIGHT</p>
         <h1>净值，沿着交易日看得更清楚。</h1>
-        <p class="subtitle">用真实净值描摹节奏，以 MA30 看见更平滑的长期趋势。</p>
-      </div>
-      <div class="hero-mark" aria-hidden="true">
-        <svg width="120" height="72" viewBox="0 0 120 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M6 62 C 30 62, 34 18, 58 18 S 88 44, 114 10" stroke="#0a9f98" stroke-width="1.5" stroke-linecap="round" opacity="0.9" />
-          <path d="M6 62 C 30 62, 34 18, 58 18 S 88 44, 114 10" stroke="#1b5f9e" stroke-width="1" stroke-linecap="round" stroke-dasharray="1 7" opacity="0.5" />
-          <circle cx="6" cy="62" r="3.5" fill="#0a9f98" />
-          <circle cx="58" cy="18" r="3" fill="white" stroke="#0a9f98" stroke-width="1.5" />
-          <circle cx="114" cy="10" r="3.5" fill="#0a9f98" />
-        </svg>
+        <p class="subtitle">用真实净值描摹节奏，以均线看见更平滑的长期趋势。</p>
       </div>
     </header>
 
@@ -247,7 +238,6 @@ watch([startDate, endDate], () => { if (selected.value && !dateRangeInvalid.valu
     <section v-if="analysis" class="chart-card" aria-live="polite">
       <div class="chart-heading">
         <div>
-          <p class="eyebrow">净值走势</p>
           <div class="chart-title">
             <h2>{{ chartTitle }}</h2>
             <span class="chart-code">{{ analysis.fundCode }}</span>
@@ -257,7 +247,7 @@ watch([startDate, endDate], () => { if (selected.value && !dateRangeInvalid.valu
       </div>
       <NavChart v-if="analysis.points.length" :analysis="analysis" />
       <div v-else class="empty-state">所选范围没有交易日数据，请调整日期。</div>
-      <div class="chart-footnote">MA30 / MA60 分别为当前及此前 29 / 59 个 A 股交易日净值的平均值；缺失窗口保持为空，不填充或插值。相对均线百分比不是实际投资收益率。</div>
+      <div class="chart-footnote">MA30 / MA60 / MA120 分别为当前及此前 29 / 59 / 119 个 A 股交易日净值的平均值；缺失窗口保持为空，不填充或插值。相对均线百分比不是实际投资收益率。</div>
     </section>
 
     <section v-else-if="analysisBusy" class="loading-card chart-card" aria-busy="true" aria-label="数据加载中">

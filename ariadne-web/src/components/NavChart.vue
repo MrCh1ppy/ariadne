@@ -18,7 +18,7 @@ let widthListener: ((event: MediaQueryListEvent) => void) | undefined
 
 const legendLayout = computed(() =>
   isNarrow.value
-    ? { top: 4, left: 0, orient: 'horizontal' as const, itemGap: 14 }
+    ? { top: 4, left: 0, orient: 'horizontal' as const, itemGap: 8 }
     : { top: 4, right: 4, itemGap: 24 },
 )
 
@@ -29,14 +29,14 @@ function render(): void {
   chart.setOption({
     animation: !prefersReducedMotion.value,
     animationDuration: 450,
-    color: ['#1b5f9e', '#0a9f98', '#8670af'],
+    color: ['#1b5f9e', '#0a9f98', '#7a6fd0', '#d08a3e'],
     grid: { left: 12, right: 20, top: 56, bottom: 32, containLabel: true },
     legend: {
       ...legendLayout.value,
-      textStyle: { color: '#5c6d81', fontSize: 12 },
-      inactiveColor: '#b8c4cf',
-      itemWidth: 18,
-      itemHeight: 3,
+      textStyle: { color: '#5c6d81', fontSize: 12.5 },
+      inactiveColor: '#c3cdd6',
+      itemWidth: isNarrow.value ? 14 : 18,
+      itemHeight: 4,
       icon: 'roundRect',
     },
     tooltip: {
@@ -83,7 +83,7 @@ function render(): void {
       nameTextStyle: { color: '#8a99a8', fontSize: 11, align: 'left' },
       scale: true,
       axisLabel: { color: '#718096', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#e6edf3' } },
+      splitLine: { lineStyle: { color: '#e9eef3' } },
     },
     series: [
       {
@@ -93,29 +93,47 @@ function render(): void {
         showSymbol: false,
         smooth: false,
         connectNulls: false,
-        lineStyle: { width: 1.5 },
+        lineStyle: { width: 2 },
+        areaStyle: { color: {
+          type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+          colorStops: [
+            { offset: 0, color: 'rgba(27, 95, 158, 0.18)' },
+            { offset: 1, color: 'rgba(27, 95, 158, 0)' },
+          ],
+        } },
         emphasis: { lineStyle: { width: 2.5 } },
         z: 2,
       },
       {
         name: 'MA30',
         type: 'line',
-        data: points.map((point) => (point.ma30 === null ? null : Number(point.ma30))),
+        data: points.map((point) => point.movingAverages.MA30?.value == null ? null : Number(point.movingAverages.MA30.value)),
         showSymbol: false,
         smooth: false,
         connectNulls: false,
-        lineStyle: { width: 3, shadowColor: 'rgba(10, 159, 152, 0.25)', shadowBlur: 6, shadowOffsetY: 2 },
+        lineStyle: { width: 2.5 },
         emphasis: { lineStyle: { width: 4 } },
         z: 3,
       },
       {
         name: 'MA60',
         type: 'line',
-        data: points.map((point) => (point.ma60 === null ? null : Number(point.ma60))),
+        data: points.map((point) => point.movingAverages.MA60?.value == null ? null : Number(point.movingAverages.MA60.value)),
         showSymbol: false,
         smooth: false,
         connectNulls: false,
         lineStyle: { width: 2, type: 'dashed' },
+        emphasis: { lineStyle: { width: 3 } },
+        z: 1,
+      },
+      {
+        name: 'MA120',
+        type: 'line',
+        data: points.map((point) => point.movingAverages.MA120?.value == null ? null : Number(point.movingAverages.MA120.value)),
+        showSymbol: false,
+        smooth: false,
+        connectNulls: false,
+        lineStyle: { width: 2, type: 'dotted' },
         emphasis: { lineStyle: { width: 3 } },
         z: 1,
       },
@@ -152,5 +170,5 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="chartEl" class="chart" role="img" aria-label="单位净值与MA30、MA60走势图" />
+  <div ref="chartEl" class="chart" role="img" aria-label="单位净值与MA30、MA60、MA120走势图" />
 </template>

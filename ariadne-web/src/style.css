@@ -1,7 +1,7 @@
 /* ---- Ariadne 设计基元 ---- */
 :root {
   color: #10243d;
-  background: #f3f7fa;
+  background: #eef2f6;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -12,9 +12,14 @@
   --teal: #0a9f98;
   --teal-soft: rgba(10, 159, 152, 0.12);
   --blue: #1b5f9e;
-  --line: #e2eaf0;
-  --card: rgba(255, 255, 255, 0.88);
-  --shadow: 0 18px 55px rgba(26, 55, 86, 0.07);
+  --up: #c8434b;
+  --down: #1e9e6a;
+  --ma30: #0a9f98;
+  --ma60: #7a6fd0;
+  --ma120: #d08a3e;
+  --line: #dde5ec;
+  --card: #fff;
+  --shadow: 0 1px 2px rgba(16,36,61,0.05), 0 8px 28px rgba(16,36,61,0.08);
 }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
@@ -60,76 +65,38 @@ body::before {
 .page-shell {
   width: min(1120px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 40px 0 72px;
+  padding: 28px 0 72px;
 }
 
-/* ---- Hero（收紧高度与顶部留白） ---- */
+/* ---- Hero ---- */
 .hero {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-  margin-bottom: 28px;
-  padding-bottom: 22px;
-  position: relative;
-}
-/* hero 底部一条“引路线”：细丝 + 末端节点 */
-.hero::after {
-  content: "";
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 1px;
-  background: linear-gradient(90deg, var(--teal) 0%, rgba(10, 159, 152, 0.35) 18%, var(--line) 55%, transparent 100%);
-}
-.hero::before {
-  content: "";
-  position: absolute;
-  left: 0; bottom: -3px;
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--teal);
-  box-shadow: 0 0 0 3px var(--teal-soft);
+  margin-bottom: 20px;
 }
 .eyebrow {
   color: var(--teal);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.16em;
-  margin: 0 0 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-/* eyebrow 前的短线节点，呼应“线”意象 */
-.eyebrow::before {
-  content: "";
-  width: 22px; height: 1px;
-  background: var(--teal);
-  flex: none;
+  margin: 0 0 8px;
 }
 h1, h2, p { margin-top: 0; }
 h1 {
   max-width: 640px;
   color: var(--ink-deep);
-  font-size: clamp(28px, 4.2vw, 44px);
+  font-size: clamp(24px, 3vw, 32px);
   letter-spacing: -0.05em;
   line-height: 1.12;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom: 0; }
-.subtitle { color: var(--muted); font-size: 16px; line-height: 1.6; margin-bottom: 0; max-width: 560px; }
-
-/* Hero 品牌标记：一条穿过三个节点的路径（Ariadne 线团意象，SVG 细线） */
-.hero-mark { flex: none; padding-bottom: 4px; }
-.hero-mark svg { display: block; }
+.subtitle { color: var(--muted); font-size: 13px; line-height: 1.5; margin-bottom: 0; max-width: 560px; }
 
 /* ---- 卡片 ---- */
 .control-card, .chart-card, .welcome-card {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 20px;
+  border-radius: 14px;
   box-shadow: var(--shadow);
-  backdrop-filter: blur(6px);
 }
 .control-card {
   position: relative;
@@ -140,6 +107,16 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
   align-items: end;
   padding: 22px;
   margin-bottom: 22px;
+}
+.control-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 14px 14px 0 0;
+  background: linear-gradient(90deg, var(--teal), transparent 70%);
 }
 
 /* ---- 表单 ---- */
@@ -153,10 +130,10 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
 }
 .field input {
   width: 100%;
-  border: 1px solid #dbe5ed;
+  border: 1px solid #d3dde5;
   border-radius: 10px;
   color: var(--ink);
-  background: #fbfdfe;
+  background: #fff;
   padding: 12px 13px;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -227,14 +204,14 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
   border: 0;
   border-radius: 10px;
   color: white;
-  background: #0b3157;
+  background: var(--ink-deep);
   padding: 13px 20px;
   cursor: pointer;
   font-weight: 750;
   white-space: nowrap;
   transition: transform 0.2s, background 0.2s;
 }
-.query-button:hover:not(:disabled) { background: var(--teal); transform: translateY(-1px); }
+.query-button:hover:not(:disabled) { background: #030f20; transform: translateY(-1px); }
 .query-button:disabled { cursor: not-allowed; opacity: 0.45; }
 
 /* ---- 图表卡 ---- */
@@ -258,11 +235,14 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
 .range-label { color: #8291a0; font-size: 13px; margin: 0; font-variant-numeric: tabular-nums; }
 .chart { width: 100%; height: 460px; }
 .chart-footnote {
-  color: #81909f;
-  font-size: 12px;
+  color: #5c6d81;
+  font-size: 12.5px;
   line-height: 1.6;
-  border-top: 1px solid #edf1f4;
-  padding-top: 14px;
+  background: #f6f9fb;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 14px;
 }
 
 /* ---- 加载占位（替代闪回欢迎卡） ---- */
@@ -320,9 +300,8 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
 
 /* ---- 响应式 ---- */
 @media (max-width: 780px) {
-  .page-shell { width: min(100% - 24px, 620px); padding-top: 26px; }
-  .hero { align-items: start; margin-bottom: 22px; }
-  .hero-mark { display: none; }
+  .page-shell { width: min(100% - 24px, 620px); padding-top: 22px; }
+  .hero { margin-bottom: 18px; }
   .control-card { grid-template-columns: 1fr 1fr; }
   .search-field { grid-column: 1 / -1; }
   .query-button { grid-column: 1 / -1; }
@@ -335,6 +314,5 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
 @media (max-width: 420px) {
   .control-card { grid-template-columns: 1fr; }
   .search-field { grid-column: auto; }
-  h1 { font-size: 30px; }
   .dropdown { max-height: 220px; }
 }
