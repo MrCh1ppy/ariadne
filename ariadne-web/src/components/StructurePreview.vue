@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import * as echarts from 'echarts'
 import type { MaStructure } from '../lib/maStructure'
-import { STRUCTURE_COLORS, STRUCTURE_SERIES, formatStructureValue, valuesOf } from '../lib/maStructure'
+import { STRUCTURE_COLORS, STRUCTURE_SERIES, formatRelativeNavPercent, formatStructureValue, valuesOf } from '../lib/maStructure'
 
 const props = defineProps<{
   structure: MaStructure
@@ -84,6 +84,13 @@ watch(chartEl, (el, previous) => {
 onBeforeUnmount(() => { chart?.dispose(); chart = undefined })
 
 const title = computed(() => `${props.structure.date} 结构预览`)
+const comparisons = computed(() => {
+  const nav = props.structure.entries.find((entry) => entry.name === '单位净值')?.value ?? null
+  return props.structure.entries.filter((entry) => entry.name !== '单位净值').map((entry) => ({
+    name: entry.name,
+    text: formatRelativeNavPercent(entry.value, nav),
+  }))
+})
 </script>
 
 <template>
@@ -116,6 +123,11 @@ const title = computed(() => `${props.structure.date} 结构预览`)
       </span>
     </div>
     <div ref="chartEl" class="preview-chart" aria-hidden="true" />
+    <table class="preview-comparison">
+      <caption>均线相对净值（MA − NAV）/ NAV × 100%</caption>
+      <thead><tr><th scope="col">相对净值</th><th v-for="item in comparisons" :key="item.name" scope="col">{{ item.name }}</th></tr></thead>
+      <tbody><tr><th scope="row">百分比</th><td v-for="item in comparisons" :key="item.name">{{ item.text }}</td></tr></tbody>
+    </table>
     <table class="visually-hidden">
       <caption>{{ title }}（按 MA120 到 MA5、单位净值顺序）</caption>
       <tbody>
@@ -135,7 +147,6 @@ const title = computed(() => `${props.structure.date} 结构预览`)
   right: 8px;
   z-index: 6;
   width: 360px;
-  max-height: 258px;
   padding: 6px 10px 4px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.9);
@@ -173,19 +184,23 @@ const title = computed(() => `${props.structure.date} 结构预览`)
   border-color: #0a9f98;
   color: #fff;
 }
-.preview-chart { width: 100%; height: 218px; }
+.preview-chart { width: 100%; height: 155px; }
+.preview-comparison { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 10px; color: #38506b; text-align: center; font-variant-numeric: tabular-nums; }
+.preview-comparison caption { caption-side: top; text-align: left; font-size: 10px; }
+.preview-comparison th, .preview-comparison td { padding: 2px 1px; white-space: nowrap; }
+.preview-comparison th { font-weight: 600; }
 
 .structure-preview.narrow {
   position: relative;
   inset: auto;
   width: 100%;
-  max-height: none;
   margin-top: 8px;
   background: rgba(8, 27, 51, 0.88);
   border-color: rgba(232, 241, 247, 0.2);
 }
 .structure-preview.narrow .preview-title { color: #e8f1f7; }
 .structure-preview.narrow .preview-chart { height: 180px; }
+.structure-preview.narrow .preview-comparison { color: #e8f1f7; }
 .structure-preview.narrow .preview-pin {
   border-color: rgba(232, 241, 247, 0.5);
   background: rgba(232, 241, 247, 0.12);

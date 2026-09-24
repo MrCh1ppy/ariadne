@@ -87,17 +87,20 @@ describe('NAV chart structure preview & comparison', () => {
     vi.unstubAllGlobals()
   })
 
-  it('keeps the original axis tooltip formatter and legend defaults untouched', async () => {
+  it('keeps the immediate dark axis tooltip and legend defaults, with only date and NAV in the tooltip', async () => {
     const wrapper = mount(NavChart, { props: { analysis: makeAnalysis() } })
     await flushPromises()
     const option = setOption.mock.lastCall?.[0] as {
-      tooltip: { trigger: string; confine: boolean; formatter: (items: { axisValue: string }[]) => string }
+      tooltip: { trigger: string; confine: boolean; backgroundColor: string; formatter: (items: { axisValue: string }[]) => string }
       legend: { selected: Record<string, boolean> }
       series: { name: string; markLine?: unknown }[]
     }
     expect(option.tooltip.trigger).toBe('axis')
     expect(option.tooltip.confine).toBe(true)
-    expect(option.tooltip.formatter([{ axisValue: '2026-09-01' }])).toContain('单位净值')
+    expect(option.tooltip.backgroundColor).toBe('rgba(8, 27, 51, 0.94)')
+    expect(option.tooltip.formatter([{ axisValue: '2026-09-01' }])).toContain('单位净值：1.0000')
+    expect(option.tooltip.formatter([{ axisValue: '2026-09-01' }])).not.toMatch(/MA\d+|相对/)
+    expect(option.tooltip.formatter([{ axisValue: '2026-09-03' }])).toContain('单位净值：暂无')
     expect(option.legend.selected).toEqual({ '单位净值': true, MA5: false, MA15: false, MA30: true, MA60: false, MA120: false })
     expect(option.series.map((series) => series.name)).toEqual(['单位净值', 'MA5', 'MA15', 'MA30', 'MA60', 'MA120'])
     expect(option.series.every((series) => series.markLine === undefined)).toBe(true)
@@ -117,6 +120,9 @@ describe('NAV chart structure preview & comparison', () => {
     await flushPromises()
     expect(wrapper.find('.structure-preview').exists()).toBe(true)
     expect(wrapper.find('.preview-title').text()).toContain('2026-09-01')
+    expect(wrapper.findComponent({ name: 'StructurePreview' }).props('targetStyle')).not.toHaveProperty('maxHeight')
+    expect(wrapper.find('.preview-comparison').text()).toContain('相对净值')
+    expect(wrapper.find('.preview-comparison tbody').text()).toContain('-20.00%')
 
     fireZr('globalout')
     vi.advanceTimersByTime(619)

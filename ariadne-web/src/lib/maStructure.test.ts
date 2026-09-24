@@ -3,6 +3,7 @@ import type { AnalysisPoint } from '../types'
 import {
   MAX_PINNED_DATES,
   buildMaStructure,
+  formatRelativeNavPercent,
   formatStructureValue,
   hasAnyValue,
   locateCategoryIndex,
@@ -48,6 +49,21 @@ describe('maStructure builder', () => {
   it('formats missing values distinctly from zero', () => {
     expect(formatStructureValue(null)).toBe('缺失')
     expect(formatStructureValue(0.98)).toBe('0.98')
+  })
+
+  it('calculates MA relative to NAV rather than using API deviationPercent', () => {
+    const structure = buildMaStructure(point('2026-09-22', '1.00', {
+      MA120: { value: '1.10', deviationPercent: '999.00' },
+      MA60: { value: '0.90', deviationPercent: '-999.00' },
+      MA30: { value: '1.00', deviationPercent: null },
+    }))
+    const nav = structure.entries[5]!.value
+    expect(structure.entries.slice(0, 5).map((entry) => formatRelativeNavPercent(entry.value, nav)))
+      .toEqual(['+10.00%', '-10.00%', '0.00%', '—', '—'])
+    expect(formatRelativeNavPercent(1, null)).toBe('—')
+    expect(formatRelativeNavPercent(null, 1)).toBe('—')
+    expect(formatRelativeNavPercent(1, 0)).toBe('—')
+    expect(formatRelativeNavPercent(0.999999, 1)).toBe('0.00%')
   })
 })
 

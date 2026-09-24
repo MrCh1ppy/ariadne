@@ -44,6 +44,16 @@ export function formatStructureValue(value: number | null): string {
   return value === null ? '缺失' : String(value)
 }
 
+/** MA relative to NAV, not the API's NAV-relative-to-MA deviationPercent. */
+export function formatRelativeNavPercent(ma: number | null, nav: number | null): string {
+  if (ma === null || nav === null || nav === 0) return '—'
+  const percent = (ma - nav) / nav * 100
+  if (!Number.isFinite(percent)) return '—'
+  const rounded = percent.toFixed(2)
+  if (rounded === '-0.00') return '0.00%'
+  return `${percent > 0 && rounded !== '0.00' ? '+' : ''}${rounded}%`
+}
+
 export const MAX_PINNED_DATES = 6
 
 export interface PinnedReconcileResult {

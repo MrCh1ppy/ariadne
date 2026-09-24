@@ -27,10 +27,8 @@ const isNarrow = ref(false)
 let widthQuery: MediaQueryList | undefined
 let widthListener: ((event: MediaQueryListEvent) => void) | undefined
 
-/* preview keeps roughly the footprint of the axis tooltip: about twice as wide,
- * about as tall, so it reads as a sibling rather than a large card. */
+/* Preview is wider than the tooltip to fit the curve and compact comparison table. */
 const PREVIEW_TARGET_WIDTH_RATIO = 2
-const PREVIEW_TARGET_HEIGHT_RATIO = 1
 
 const legendLayout = computed(() =>
   isNarrow.value
@@ -64,18 +62,10 @@ let zrOut: (() => void) | undefined
 const pointByDate = computed(() => new Map(props.analysis.points.map((point) => [point.date, point])))
 const previewDateIsHovered = computed(() => hoverDate.value !== null && hoverDate.value === previewDate.value)
 
-/* measured tooltip size, used to keep the preview at ~2x width / ~1x height */
-const tooltipSize = ref<{ width: number; height: number } | null>(null)
+/* measured tooltip width, used to keep the preview at ~2x width */
+const tooltipWidth = ref<number | null>(null)
 const previewTop = ref(34)
 let tooltipSizeMeasured = false
-
-const previewTargetSize = computed(() => {
-  if (!tooltipSize.value) return null
-  return {
-    width: Math.round(tooltipSize.value.width * PREVIEW_TARGET_WIDTH_RATIO),
-    height: Math.round(tooltipSize.value.height * PREVIEW_TARGET_HEIGHT_RATIO),
-  }
-})
 
 function refreshTooltipSize(): void {
   if (isTouch.value || isNarrow.value) return
@@ -85,7 +75,7 @@ function refreshTooltipSize(): void {
   if (!el) return
   const rect = el.getBoundingClientRect()
   if (rect.width > 0 && rect.height > 0) {
-    tooltipSize.value = { width: rect.width, height: rect.height }
+    tooltipWidth.value = rect.width
     tooltipSizeMeasured = true
   }
 }
@@ -106,13 +96,10 @@ const previewVisible = computed(() =>
   && (previewPinnedVisible.value || previewHover.value || (isTouch.value && previewDate.value !== null)),
 )
 
-/* passes the measured tooltip footprint into the preview so it can size itself */
+/* Use the measured tooltip width without clipping the chart/table to the now-short tooltip height. */
 const previewStyle = computed(() => {
   const style: Record<string, string> = { top: `${previewTop.value}px` }
-  if (previewTargetSize.value) {
-    style.width = `${previewTargetSize.value.width}px`
-    style.maxHeight = `${previewTargetSize.value.height}px`
-  }
+  if (tooltipWidth.value) style.width = `${Math.max(360, Math.round(tooltipWidth.value * PREVIEW_TARGET_WIDTH_RATIO))}px`
   return style
 })
 
