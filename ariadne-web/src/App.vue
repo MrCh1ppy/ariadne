@@ -171,14 +171,6 @@ watch([startDate, endDate], () => { if (selected.value && !dateRangeInvalid.valu
 
 <template>
   <main class="page-shell">
-    <header class="hero">
-      <div>
-        <p class="eyebrow">ARIADNE · FUND INSIGHT</p>
-        <h1>净值，沿着交易日看得更清楚。</h1>
-        <p class="subtitle">用真实净值描摹节奏，以均线看见更平滑的长期趋势。</p>
-      </div>
-    </header>
-
     <section class="control-card" aria-label="基金查询">
       <div class="field search-field">
         <label for="fund-search">搜索基金</label>
@@ -224,7 +216,6 @@ watch([startDate, endDate], () => { if (selected.value && !dateRangeInvalid.valu
         <label for="end-date">结束日期</label>
         <input id="end-date" v-model="endDate" type="date" :aria-invalid="dateRangeInvalid" aria-describedby="date-range-error" />
       </div>
-      <button class="query-button" :disabled="!selected || analysisBusy || dateRangeInvalid" @click="runAnalysis">{{ analysisBusy ? '加载中…' : '查询趋势' }}</button>
       <span v-if="dateRangeInvalid" id="date-range-error" class="field-error" role="alert">开始日期不能晚于结束日期，请调整。</span>
     </section>
 

@@ -70,28 +70,8 @@ body::before {
   padding: 28px 0 72px;
 }
 
-/* ---- Hero ---- */
-.hero {
-  margin-bottom: 20px;
-}
-.eyebrow {
-  color: var(--teal);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  margin: 0 0 8px;
-}
-h1, h2, p { margin-top: 0; }
-h1 {
-  max-width: 640px;
-  color: var(--ink-deep);
-  font-size: clamp(24px, 3vw, 32px);
-  letter-spacing: -0.05em;
-  line-height: 1.12;
-  margin-bottom: 6px;
-}
+h2, p { margin-top: 0; }
 h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom: 0; }
-.subtitle { color: var(--muted); font-size: 13px; line-height: 1.5; margin-bottom: 0; max-width: 560px; }
 
 /* ---- 卡片 ---- */
 .control-card, .chart-card, .welcome-card {
@@ -104,7 +84,7 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(260px, 1.8fr) 1fr 1fr auto;
+  grid-template-columns: minmax(260px, 1.8fr) 1fr 1fr;
   gap: 16px;
   align-items: end;
   padding: 22px;
@@ -202,20 +182,6 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
 .dropdown strong { color: var(--teal); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; }
 .dropdown span { color: #5c6d81; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.query-button {
-  border: 0;
-  border-radius: 10px;
-  color: white;
-  background: var(--ink-deep);
-  padding: 13px 20px;
-  cursor: pointer;
-  font-weight: 750;
-  white-space: nowrap;
-  transition: transform 0.2s, background 0.2s;
-}
-.query-button:hover:not(:disabled) { background: #030f20; transform: translateY(-1px); }
-.query-button:disabled { cursor: not-allowed; opacity: 0.45; }
-
 /* ---- 图表卡 ---- */
 .chart-card { padding: 26px 28px 20px; }
 .chart-heading {
@@ -303,10 +269,8 @@ h2 { color: var(--ink); font-size: 22px; letter-spacing: -0.03em; margin-bottom:
 /* ---- 响应式 ---- */
 @media (max-width: 780px) {
   .page-shell { width: min(100% - 24px, 620px); padding-top: 22px; }
-  .hero { margin-bottom: 18px; }
   .control-card { grid-template-columns: 1fr 1fr; }
   .search-field { grid-column: 1 / -1; }
-  .query-button { grid-column: 1 / -1; }
   .chart-card, .loading-card { padding: 20px 14px 16px; }
   .chart-heading { display: block; }
   .range-label { margin-top: 8px; }

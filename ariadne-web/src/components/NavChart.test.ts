@@ -3,12 +3,14 @@ import { mount, flushPromises } from '@vue/test-utils'
 import type { FundAnalysis } from '../types'
 
 const setOption = vi.hoisted(() => vi.fn<(options: unknown) => void>())
-vi.mock('echarts', () => ({ init: () => ({ setOption, resize: vi.fn(), dispose: vi.fn() }) }))
+const getOption = vi.hoisted(() => vi.fn<() => unknown>())
+vi.mock('echarts', () => ({ init: () => ({ setOption, getOption, resize: vi.fn(), dispose: vi.fn() }) }))
 
 import NavChart from './NavChart.vue'
 
 describe('NAV chart', () => {
   it('plots NAV and five averages, preserving gaps and confining the tooltip', async () => {
+    getOption.mockReturnValue(undefined)
     vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
     const analysis: FundAnalysis = {
       fundCode: '022485', startDate: '2026-09-21', endDate: '2026-09-22', warnings: [],
@@ -34,7 +36,7 @@ describe('NAV chart', () => {
     const option = setOption.mock.lastCall?.[0] as {
       tooltip: { confine: boolean; formatter: (items: { axisValue: string }[]) => string }
       series: { name: string; data: (number | null)[]; connectNulls: boolean; smooth: boolean; lineStyle: { type?: string }; areaStyle?: unknown }[]
-      legend: { type: string; left: number; right: number }
+      legend: { type: string; left: number; right: number; selected: Record<string, boolean> }
       color: string[]
       animation: boolean
     }
@@ -45,10 +47,42 @@ describe('NAV chart', () => {
     expect(option.series[0]?.areaStyle).toBeDefined()
     expect(option.animation).toBe(false)
     expect(option.legend).toMatchObject({ type: 'scroll', left: 0, right: 0 })
+    expect(option.legend.selected).toEqual({ '单位净值': true, MA5: false, MA15: false, MA30: true, MA60: false, MA120: false })
     expect(option.series.every((series) => !series.connectNulls && !series.smooth)).toBe(true)
     expect(option.tooltip.confine).toBe(true)
     expect(option.tooltip.formatter([{ axisValue: '2026-09-22' }])).toContain('相对 MA60：<span style="color:#eef4f8">暂无</span>')
     expect(option.tooltip.formatter([{ axisValue: '2026-09-22' }])).toContain('MA5：暂无')
+    wrapper.unmount()
+    vi.unstubAllGlobals()
+  })
+
+  it('keeps user legend selections when analysis or media preferences change', async () => {
+    getOption.mockReturnValue(undefined)
+    const listeners = new Map<string, (event: { matches: boolean }) => void>()
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: false,
+      addEventListener: (_: string, listener: (event: { matches: boolean }) => void) => listeners.set(query, listener),
+      removeEventListener: vi.fn(),
+    }))
+    const analysis: FundAnalysis = { fundCode: '022485', startDate: '2026-09-21', endDate: '2026-09-21', warnings: [], points: [] }
+    const wrapper = mount(NavChart, { props: { analysis } })
+    await flushPromises()
+    const selected = { '单位净值': false, MA5: true, MA15: false, MA30: true, MA60: true, MA120: false }
+    getOption.mockReturnValue({ legend: [{ selected }] })
+    const calls = setOption.mock.calls.length
+
+    await wrapper.setProps({ analysis: { ...analysis, endDate: '2026-09-22' } })
+    expect(setOption).toHaveBeenCalledTimes(calls + 1)
+    expect((setOption.mock.lastCall?.[0] as { legend: { selected: unknown } }).legend.selected).toEqual(selected)
+    listeners.get('(max-width: 780px)')?.({ matches: true })
+    await flushPromises()
+    expect(setOption).toHaveBeenCalledTimes(calls + 2)
+    expect((setOption.mock.lastCall?.[0] as { legend: { selected: unknown } }).legend.selected).toEqual(selected)
+    listeners.get('(prefers-reduced-motion: reduce)')?.({ matches: true })
+    await flushPromises()
+    expect(setOption).toHaveBeenCalledTimes(calls + 3)
+    expect((setOption.mock.lastCall?.[0] as { legend: { selected: unknown } }).legend.selected).toEqual(selected)
+
     wrapper.unmount()
     vi.unstubAllGlobals()
   })

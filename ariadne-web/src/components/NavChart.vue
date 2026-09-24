@@ -33,6 +33,9 @@ function render(): void {
     grid: { left: 12, right: 20, top: 56, bottom: 32, containLabel: true },
     legend: {
       ...legendLayout.value,
+      selected: chart.getOption()?.legend?.[0]?.selected ?? {
+        '单位净值': true, MA5: false, MA15: false, MA30: true, MA60: false, MA120: false,
+      },
       textStyle: { color: '#5c6d81', fontSize: 12.5 },
       inactiveColor: '#c3cdd6',
       itemWidth: isNarrow.value ? 14 : 18,
